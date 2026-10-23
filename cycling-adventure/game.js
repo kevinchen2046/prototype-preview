@@ -8,7 +8,7 @@ const assetPaths={
  mountain:'assets/environments/mountain.svg',forest:'assets/environments/forest.svg',canyon:'assets/environments/canyon.svg',volcano:'assets/environments/volcano.svg'
 };
 const images={};for(const [key,src] of Object.entries(assetPaths)){const img=new Image();img.onload=()=>{};img.onerror=()=>console.warn('Asset failed to load:',src);img.src=src;images[key]=img;}
-const state={mode:'riding',elapsed:0,worldDistance:0,speed:720,hazardGap:560,verticalOffset:0,verticalVelocity:0,touchHeld:false,flipAngle:0,airTime:0,score:0,coins:0,coinStreak:0,recoveryProgress:0,landingPoseTimer:0,boostFlashTimer:0,nextSpawnDistance:2450,nextCoinDistance:470,nextCoinGroupId:1,obstacles:[],coinItems:[],coinGroups:[],background:'',lastCoinPickup:0};
+const state={mode:'riding',elapsed:0,worldDistance:0,speed:720,hazardGap:560,verticalOffset:0,verticalVelocity:0,touchHeld:false,flipAngle:0,airTime:0,score:0,coins:0,coinStreak:0,recoveryProgress:0,landingPoseTimer:0,boostFlashTimer:0,nextSpawnDistance:3300,nextCoinDistance:470,nextCoinGroupId:1,obstacles:[],coinItems:[],coinGroups:[],background:'',lastCoinPickup:0};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rand=(min,max)=>min+Math.random()*(max-min);
 const hash01=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453123;return v-Math.floor(v);};
