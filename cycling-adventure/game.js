@@ -60,7 +60,7 @@ function drawTerrain(){const g=ctx;g.beginPath();g.moveTo(0,groundY(worldAtScree
  // Soil road edge, warm dirt trail and center glint make the slope legible at speed.
  g.beginPath();g.moveTo(0,groundY(worldAtScreen(0)));for(let x=8;x<=W;x+=8)g.lineTo(x,groundY(worldAtScreen(x)));g.lineJoin='round';g.lineCap='round';g.strokeStyle='#3b3029';g.lineWidth=29;g.stroke();g.strokeStyle='#b77b43';g.lineWidth=21;g.stroke();g.strokeStyle='#e8b66d';g.lineWidth=4;g.stroke();
  const first=Math.floor((state.worldDistance-PLAYER_X)/135)*135;for(let wx=first;wx<worldAtScreen(W)+135;wx+=135){const sx=PLAYER_X+wx-state.worldDistance,sy=groundY(wx),r=hash01(wx*.13);if(r<.52)continue;g.strokeStyle=r>.83?'#315b35':'#3c6c3b';g.lineWidth=3;g.beginPath();g.moveTo(sx,sy+5);g.lineTo(sx-5,sy-7);g.moveTo(sx+2,sy+4);g.lineTo(sx+8,sy-5);g.stroke();}}
-function drawPursuer(){const x=clamp(PLAYER_X-70-(state.hazardGap-90)*.5,45,PLAYER_X-70),gY=groundY(worldAtScreen(x)),threat=clamp((560-state.hazardGap)/430,0,1),r=59+clamp(state.elapsed/95,0,1)*18+threat*15,y=gY-r+7;
+function drawPursuer(){const x=clamp(PLAYER_X-70-(state.hazardGap-90)*.35,45,PLAYER_X-70),gY=groundY(worldAtScreen(x)),threat=clamp((560-state.hazardGap)/430,0,1),r=59+clamp(state.elapsed/95,0,1)*18+threat*15,y=gY-r+7;
  // Dust rolls along the same downhill surface as the pursuing boulder.
  ctx.save();for(let i=0;i<8;i++){const px=x-26-((i*24+state.elapsed*(35+threat*42))%155),py=groundY(worldAtScreen(px))-8-(Math.sin(state.elapsed*4+i)*10);ctx.beginPath();ctx.ellipse(px,py,15+(i%3)*6,9+(i%2)*5,-.12,0,Math.PI*2);ctx.fillStyle=i%2?'#a18b74':'#796a5b';ctx.globalAlpha=.5;ctx.fill();}
  ctx.strokeStyle='#3f3d38';ctx.lineWidth=7;ctx.fillStyle='#777a75';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.stroke();
