@@ -80,7 +80,7 @@ const ring=this.add.circle(210,460,64,0xffffff,0.001).setStrokeStyle(this.beatNo
 this.tweens.add({targets:ring,scaleX:2.05,scaleY:2.05,alpha:0,duration:360,ease:'Sine.Out',onComplete:()=>ring.destroy()});
 this.pulses.forEach((p,i)=>{if(!p.o||!p.o.active)return;const o=p.o;if(o===this.flyTarget)return;this.tweens.add({targets:o,y:o.y-13,angle:p.baseAngle+((this.beatNo%2)?4:-4),duration:95,ease:'Quad.Out',yoyo:true,hold:45});});
 if(this.eqBars){this.eqBars.forEach((b,i)=>{if(b&&b.active){const h=8+((i*7+this.beatNo*11)%34);this.tweens.add({targets:b,scaleY:h/20,duration:100,yoyo:true,hold:80});}});}
-if(this.stage===0&&this.flyTarget&&this.beatNo%2===0)this.moveFly();
+if(this.stage===0&&this.flyTarget&&this.beatNo%2===0)this.moveFly();if(this.stage===1&&this.photoInner&&this.photoInner.active){this.photoInner.setScale(1.25);this.tweens.add({targets:this.photoInner,scale:.62,duration:210,ease:'Quad.In'});}
 }
 startRun(){this.score=0;this.combo=0;this.best=0;this.beatNo=0;this.startStage(0);}
 startStage(i){
@@ -115,7 +115,7 @@ this.image('hero',210,404,184,198,-3);this.addGlow(210,408,118,0xffd84d,.1);
 this.txt(210,548,'摆好姿势！等光圈合上。',15,'#c2c8e7',.5,'normal');
 const outer=this.track(this.add.circle(210,430,65,0xffffff,.02).setStrokeStyle(4,0xffffff,.65));this.photoOuter=outer;
 const inner=this.track(this.add.circle(210,430,105,0xffffff,.01).setStrokeStyle(3,0xffd84d,.85));this.photoInner=inner;
-this.tweens.add({targets:inner,scale:.55,duration:900,ease:'Sine.InOut',yoyo:true,repeat:-1});
+this.photoInner=inner;
 this.button(210,676,230,68,'📸  拍照！',()=>this.tryPhoto(),0x8d59d8);
 this.txt(210,744,'金色圈收进白色圈时得分最高',12,'#929fc9',.5,'normal');
 }
@@ -155,7 +155,7 @@ this.leftPad=this.track(this.add.circle(105,616,54,0x2a9dbd,.95).setStrokeStyle(
 this.txt(105,616,'左喷射器',14,'#fff');this.txt(315,616,'右喷射器',14,'#fff');this.txt(210,715,'同时按住左右两侧',16,'#c2c9e9');this.txt(210,753,'桌面可同时按 A + L',12,'#8e9bc6',.5,'normal');
 }
 stageShake(){
-this.image('vampire',210,417,178,194,4);this.txt(210,556,'Z  z  z  …',26,'#c3b1ff');this.txt(210,600,'吸血鬼的闹钟坏了。',14,'#b8c2e5',.5,'normal');
+this.vampireSprite=this.image('vampire',210,417,178,194,4);this.txt(210,556,'Z  z  z  …',26,'#c3b1ff');this.txt(210,600,'吸血鬼的闹钟坏了。',14,'#b8c2e5',.5,'normal');
 this.button(210,675,252,58,'启用摇晃传感器',()=>this.enableMotion(),0x5b4b9b);
 this.button(210,746,252,52,'桌面模拟摇动',()=>this.shakeHit(),0x247e8a);
 }
@@ -180,7 +180,7 @@ bossTap(){if(this.bossAlert){this.actionSuccess('装忙成功！你刚刚合上�
 checkPads(){if(this.pad.left!==null&&this.pad.right!==null&&Math.abs(this.pad.left-this.pad.right)<260){this.actionSuccess('双喷射器同时点火！超人进入低轨道。');this.pad={left:null,right:null};if(this.leftPad)this.leftPad.setFillStyle(0x2a9dbd);if(this.rightPad)this.rightPad.setFillStyle(0x8254bb);}else if(this.pad.left!==null&&this.pad.right!==null){this.actionMiss('要同时按下！再来一次。');this.pad={left:null,right:null};}}
 actionSuccess(msg){
 this.hitCount++;this.combo++;this.best=Math.max(this.best,this.combo);this.score+=100+Math.min(100,this.combo*8);if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal+(this.hitCount>=this.goal?'  ✓':''));
-this.feedback(msg,true);const burst=this.add.particles(210,440,'__WHITE');if(burst){burst.setDepth(20);burst.explode?.(12);}
+this.feedback(msg,true);for(let i=0;i<9;i++){const a=(Math.PI*2*i/9)+Math.random()*.2,dist=Phaser.Math.Between(36,88),dot=this.track(this.add.circle(210,440,Phaser.Math.Between(3,6),COLORS[Math.max(0,Math.min(8,this.stage))],1));this.tweens.add({targets:dot,x:210+Math.cos(a)*dist,y:440+Math.sin(a)*dist,alpha:0,scale:.2,duration:360,ease:'Quad.Out',onComplete:()=>dot.destroy()});}
 }
 actionResult(ok,msg){if(ok)this.actionSuccess(msg);else this.actionMiss(msg);}
 actionMiss(msg){this.combo=0;if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal);if(this.time.now-this.lastWrong>450){this.feedback(msg,false);this.lastWrong=this.time.now;}}
