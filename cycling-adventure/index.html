@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f5f1e7">
+<title>山野飞车 · Cycling Adventure</title>
+<style>
+:root{color-scheme:light;--ink:#243d3b;--muted:#687d77;--paper:#f5f1e7;--orange:#ef7047;--teal:#2b9b92}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+body{min-height:100dvh;background:radial-gradient(ellipse at 15% 0%,#fff9e9 0,#f5f1e7 48%,#e8eee2 100%)}
+.page{width:min(1480px,100%);margin:0 auto;padding:24px clamp(14px,3vw,40px) 30px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px}
+.brand{display:flex;align-items:center;gap:12px}.mark{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:#f5c84d;border:2px solid #75412f;box-shadow:inset 0 -4px #e5a73e;font-size:26px}
+h1{font-size:clamp(22px,3vw,32px);letter-spacing:-.04em;line-height:1.05;margin:0}.subtitle{color:var(--muted);font-size:12px;margin-top:6px;letter-spacing:.12em;text-transform:uppercase}
+.pill{border:1px solid #c9d8c9;border-radius:99px;padding:9px 13px;color:#477068;font-size:12px;font-weight:700;background:#ffffff8a;white-space:nowrap}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:20px;align-items:start}
+.game-shell{border:2px solid #75412f;border-radius:22px;background:#fff9ed;padding:8px;box-shadow:0 10px 0 #75412f1b,0 22px 48px #243d3b18;overflow:hidden}
+#game{width:100%;aspect-ratio:16/9;display:block;border-radius:14px;background:#ffe8a5;touch-action:none;outline:none}
+.below{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 8px 5px;font-size:12px;color:var(--muted)}
+.key{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;padding:0 7px;border:1px solid #d5c9ae;border-bottom-width:3px;border-radius:7px;background:#fffdf7;color:#3d5149;font-weight:800;margin:0 3px}
+.side{display:flex;flex-direction:column;gap:12px}
+.panel{border:1px solid #d8dece;border-radius:18px;padding:17px;background:#fffdf7c9;box-shadow:0 5px 18px #33483d0a}
+.panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;margin:0 0 13px;color:#668078}
+.control{display:flex;gap:10px;margin:12px 0}.control-icon{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:#e2f1df;flex-shrink:0;font-size:18px}
+.control b{display:block;font-size:13px;margin-bottom:3px}.control p{font-size:12px;line-height:1.55;color:var(--muted);margin:0}
+.objectives{display:flex;flex-direction:column;gap:9px}.objective{display:flex;align-items:center;gap:9px;font-size:12px;color:#506b62}.dot{width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 4px #ef70471c}
+.notice{font-size:11px;line-height:1.65;color:#7b8980;margin:2px 2px 0}
+a{color:inherit}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.notice{grid-column:1/-1}.topbar{align-items:flex-start}.pill{font-size:10px}}
+@media(max-width:520px){.page{padding:12px 9px 20px}.topbar{margin-bottom:12px}.mark{width:40px;height:40px;font-size:22px;border-radius:13px}.pill{max-width:110px;white-space:normal;text-align:center;padding:7px 9px}.game-shell{padding:4px;border-radius:13px}#game{border-radius:9px}.below{font-size:10px;padding:10px 3px 3px}.side{grid-template-columns:1fr}.panel{padding:14px}.notice{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="brand"><div class="mark">🚵</div><div><h1>山野飞车</h1><div class="subtitle">Cycling Adventure · Playable Preview</div></div></div>
+    <div class="pill">HTML5 原型 · 点击即可游玩</div>
+  </header>
+  <main class="layout">
+    <section>
+      <div class="game-shell"><canvas id="game" width="1280" height="720" tabindex="0" aria-label="山野飞车游戏画面"></canvas></div>
+      <div class="below"><span><span class="key">SPACE</span> 起跳 / 按住翻转</span><span>移动端：触摸并按住画面</span></div>
+    </section>
+    <aside class="side">
+      <section class="panel"><h2>How to ride</h2>
+        <div class="control"><div class="control-icon">👆</div><div><b>点按起跳</b><p>骑手遇到障碍时，点击或按空格跳起。</p></div></div>
+        <div class="control"><div class="control-icon">🔄</div><div><b>空中按住翻转</b><p>起跳后继续按住，完成整圈翻转可获得额外分数。</p></div></div>
+        <div class="control"><div class="control-icon">🛬</div><div><b>落地前松手</b><p>尽量让车轮平稳着地；旋转角度偏差过大会摔倒。</p></div></div>
+        <div class="control"><div class="control-icon">⚡</div><div><b>摔倒后快速连点</b><p>连续点击加快恢复。追赶中的山崩会持续逼近。</p></div></div>
+      </section>
+      <section class="panel"><h2>Ride through</h2><div class="objectives">
+        <div class="objective"><span class="dot"></span>山地 · 起步练习</div>
+        <div class="objective"><span class="dot"></span>森林 · 保持节奏</div>
+        <div class="objective"><span class="dot"></span>峡谷 · 注意跳台</div>
+        <div class="objective"><span class="dot"></span>火山 · 不要被山崩追上</div>
+      </div></section>
+      <p class="notice">这是公开试玩原型，游戏规则与正式开发仓库同步迭代。当前重点验证骑手姿态、自行车翻转、障碍节奏与追逐压力；美术仍在首轮打磨阶段。</p>
+    </aside>
+  </main>
+</div>
+<script src="./game.js"></script>
+</body>
+</html>
