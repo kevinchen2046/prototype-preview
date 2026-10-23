@@ -57,6 +57,7 @@ if(this.beatCount%2===0){const hi=this.audio.createOscillator(),hg=this.audio.cr
 }
 startRun(){this.score=0;this.combo=0;this.best=0;this.beatCount=0;this.startStage(0);}
 startStage(i){
+if(this.mic){this.mic.stream.getTracks().forEach(t=>t.stop());this.mic.ctx.close();this.mic=null;this.micData=null;}
 this.clearObjects();this.stage=i;this.locked=false;this.holding=false;this.hold=0;this.swipeStart=null;this.pad={left:null,right:null};this.elapsed=0;this.duration=this.quick?5000:15000;
 if(i>=LEVELS.length){this.showResults();return;}
 const L=LEVELS[i];this.txt(210,42,'第 '+(i+1)+' / 9 关',14,'#a9afd2');this.txt(210,82,L.name,27,'#ffdf61');this.txt(210,126,L.desc,15,'#f4f2ff',.5,'normal');
@@ -102,7 +103,7 @@ if(this.stage!==7)return;const a=e.accelerationIncludingGravity||e.acceleration;
 }
 enableMotion(){try{const D=window.DeviceMotionEvent;if(D&&typeof D.requestPermission==='function')D.requestPermission().then(s=>{if(s==='granted')this.feedback('传感器已启用，摇一摇！',true);else this.feedback('没有获得传感器权限，可使用桌面模拟按钮。',false);}).catch(()=>this.feedback('传感器不可用，请使用模拟按钮。',false));else this.feedback('现在摇动手机试试！',true);this.motionEnabled=true;}catch(e){this.feedback('传感器不可用，请使用模拟按钮。',false);}}
 async enableMic(){
-try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('unsupported');const stream=await navigator.mediaDevices.getUserMedia({audio:true});const C=window.AudioContext||window.webkitAudioContext;const ctx=new C();const source=ctx.createMediaStreamSource(stream);const analyser=ctx.createAnalyser();analyser.fftSize=256;source.connect(analyser);this.mic={stream,ctx,analyser};this.micData=new Uint8Array(analyser.fftSize);this.feedback('麦克风已开启，大喊一声！',true);}catch(e){this.feedback('麦克风不可用或未授权，可点模拟尖叫。',false);}
+try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('unsupported');const stream=await navigator.mediaDevices.getUserMedia({audio:true});if(this.stage!==8){stream.getTracks().forEach(t=>t.stop());return;}const C=window.AudioContext||window.webkitAudioContext;const ctx=new C();const source=ctx.createMediaStreamSource(stream);const analyser=ctx.createAnalyser();analyser.fftSize=256;source.connect(analyser);this.mic={stream,ctx,analyser};this.micData=new Uint8Array(analyser.fftSize);this.feedback('麦克风已开启，大喊一声！',true);}catch(e){this.feedback('麦克风不可用或未授权，可点模拟尖叫。',false);}
 }
 update(_,delta){
 if(this.stage>=0&&this.stage<LEVELS.length&&!this.locked){
