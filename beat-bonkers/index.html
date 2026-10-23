@@ -42,7 +42,7 @@ async loadSprites(){
 for(const [key,path] of ASSETS){const response=await fetch('assets/'+path,{cache:'no-store'});if(!response.ok)throw new Error(path+' HTTP '+response.status);const svg=await response.text();const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(path+' SVG 解码失败'));img.src=url;});const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,256,256);if(this.textures.exists(key))this.textures.remove(key);this.textures.addCanvas(key,canvas);}finally{URL.revokeObjectURL(url);}}
 }
 track(o){this.phaseObjects.push(o);return o;}
-clearPhase(){for(const o of this.phaseObjects){try{this.tweens.killTweensOf(o);if(o&&o.destroy)o.destroy();}catch(e){}}this.phaseObjects=[];this.hazards=[];this.streaks=[];this.player=null;this.hudDistance=null;this.hudScore=null;this.hudLives=null;this.hudMode=null;this.hudTimer=null;this.hudProgress=null;this.hudHits=null;this.hudBeatDots=[];this.flyTarget=null;this.helmet=null;this.pigeonTarget=null;this.miniHero=null;this.miniBoss=null;this.miniAlert=null;this.photoRing=null;this.holdMarker=null;this.feedbackContainer=null;this.draggingHelmet=false;}
+clearPhase(){for(const o of this.phaseObjects){try{this.tweens.killTweensOf(o);if(o&&o.destroy)o.destroy();}catch(e){}}this.phaseObjects=[];this.hazards=[];this.streaks=[];this.player=null;this.hudDistance=null;this.hudScore=null;this.hudLives=null;this.hudMode=null;this.hudTimer=null;this.hudProgress=null;this.hudHits=null;this.hudBeatDots=[];this.flyTarget=null;this.helmet=null;this.pigeonTarget=null;this.miniHero=null;this.miniBoss=null;this.miniAlert=null;this.photoRing=null;this.holdMarker=null;this.feedbackContainer=null;this.draggingHelmet=false;this.finishGate=null;}
 text(x,y,str,size=18,color='#fff',origin=.5,weight='bold'){return this.track(this.add.text(x,y,str,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:size+'px',fontStyle:weight,color,align:'center',wordWrap:{width:350},lineSpacing:4}).setOrigin(origin,.5));}
 image(key,x,y,w,h,angle=0){return this.track(this.add.image(x,y,key).setDisplaySize(w,h).setAngle(angle));}
 button(x,y,w,h,label,fn,color=0x7655e8){
@@ -100,7 +100,7 @@ this.modeSwitchAt=(Math.floor(this.distance/2600)+1)*2600;
 if(first){this.nextHazardDistance=260;}else{this.nextHazardDistance=this.distance+280;}
 }
 switchMode(next){
-if(next===this.modeIndex)return;this.modeIndex=next;const m=this.modeInfo(next);
+if(next===this.modeIndex)return;if(this.finishGate){this.finishGate.container.destroy();this.finishGate=null;}this.modeIndex=next;const m=this.modeInfo(next);
 for(const h of this.hazards){if(h.ring)h.ring.destroy();if(h.sprite)h.sprite.destroy();}this.hazards=[];
 if(this.player&&this.player.active){this.player.setTexture(m.texture);this.player.setAngle(m.angle);this.tweens.add({targets:this.player,y:m.y,angle:m.angle,duration:320,ease:'Back.Out'});}
 if(this.hudMode)this.hudMode.setText(m.name);
@@ -119,7 +119,7 @@ updateRun(delta){
 const dt=delta/1000;this.distance+=(this.quick?1.6:1)*dt*(160+Math.min(100,this.distance/125));
 const speed=160+Math.min(100,this.distance/125);const mode=this.modeInfo(this.modeIndex);
 if(this.hudDistance)this.hudDistance.setText('距离 '+Math.floor(this.distance/10)+'m');if(this.hudScore)this.hudScore.setText('分数 '+this.score);if(this.hudLives)this.hudLives.setText('♥ '.repeat(Math.max(0,this.lives)).trim()||'♡ ♡ ♡');
-if(this.hudProgress)this.hudProgress.width=350*Math.min(1,this.distance/(this.finishAt||this.nextMiniAt||18000));
+if(this.hudProgress)this.hudProgress.width=350*Math.min(1,this.distance/(this.minisCompleted>=EVENTS.length&&this.finishAt>0?this.finishAt:19000));
 const wantedMode=this.modeForDistance();if(wantedMode!==this.modeIndex)this.switchMode(wantedMode);
 const flow=this.modeInfo(this.modeIndex).dir;
 for(const st of this.streaks){st.y+=flow*speed*dt*.68;if(st.y>700)st.y=215;if(st.y<215)st.y=700;}
@@ -128,8 +128,16 @@ if(this.distance>=this.nextHazardDistance){this.spawnHazard();this.nextHazardDis
 for(let i=this.hazards.length-1;i>=0;i--){const h=this.hazards[i];h.y+=h.dir*speed*dt*1.25;h.ring.y=h.y;h.sprite.y=h.y;h.sprite.angle+=h.dir*dt*55;h.ring.alpha=.08+Math.abs(Math.sin(this.time.now/150))*.12;
 if(!h.hit&&h.lane===this.lane&&Math.abs(h.y-this.player.y)<48&&this.time.now>this.invulnerableUntil&&this.time.now>this.dashUntil){h.hit=true;this.hitObstacle(h);}
 if(h.y>H+120||h.y< -120||h.hit){h.ring.destroy();h.sprite.destroy();this.hazards.splice(i,1);}}
+if(this.minisCompleted>=EVENTS.length&&this.finishAt>0){if(!this.finishGate&&this.distance>=this.finishAt-550)this.spawnFinishGate();if(this.finishGate){this.finishGate.y+=this.finishGate.dir*speed*dt*1.25;this.finishGate.container.y=this.finishGate.y;}if(this.distance>=this.finishAt){this.showResults(true);return;}}
 if(this.distance>=this.nextMiniAt&&this.minisCompleted<EVENTS.length){this.beginMini(this.minisCompleted);return;}
-if(this.minisCompleted>=EVENTS.length&&this.finishAt>0&&this.distance>=this.finishAt){this.showResults(true);return;}
+}
+spawnFinishGate(){
+const dir=this.modeInfo(this.modeIndex).dir,y=dir>0?-90:H+90;
+const container=this.add.container(210,y);container.setDepth(8);
+const g=this.add.graphics();g.fillStyle(0xffd34f,1);g.fillRoundedRect(-145,-18,290,36,10);g.fillStyle(0x202442,1);for(let i=0;i<10;i++){if(i%2===0)g.fillRect(-135+i*27,-12,14,24);}g.fillStyle(0xffdf61,1);g.fillRoundedRect(-160,-80,24,160,8);g.fillRoundedRect(136,-80,24,160,8);g.lineStyle(4,0xffffff,.85);g.strokeRoundedRect(-160,-80,320,160,12);
+const label=this.add.text(0,-2,'终 点 线 ！',{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:'24px',fontStyle:'bold',color:'#17182d'}).setOrigin(.5);
+container.add([g,label]);this.phaseObjects.push(container);this.finishGate={container,y,dir};
+this.feedback('终点就在前面！最后冲刺！',true);
 }
 hitObstacle(h){
 this.lives--;this.combo=0;this.invulnerableUntil=this.time.now+1000;this.feedback('撞上了！'+(this.lives>0?'还剩 '+this.lives+' 次机会。':'跑酷结束！'),false);this.score=Math.max(0,this.score-80);
