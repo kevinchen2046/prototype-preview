@@ -1,263 +1,278 @@
 <!doctype html>
-<html lang="zh-CN"><head>
+<html lang="zh-CN">
+<head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0b0d20"><title>节拍疯人秀 · Beat Bonkers</title>
+<meta name="theme-color" content="#090b18"><title>节拍疯人秀 · Beat Bonkers</title>
 <style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080a16;color:#fff;font-family:Inter,system-ui,"Microsoft YaHei",sans-serif}body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 8%,#34305d 0,#13172e 48%,#070812 100%)}#frame{width:min(100vw,430px);height:min(100dvh,900px);aspect-ratio:420/860;position:relative;overflow:hidden;border-radius:28px;box-shadow:0 28px 90px #000b,0 0 0 1px #ffffff25;background:#11142b}#game,#game canvas{width:100%;height:100%;display:block;touch-action:none}#note{position:fixed;bottom:7px;left:50%;transform:translateX(-50%);color:#b9bddb;font-size:11px;white-space:nowrap;opacity:.8}@media(max-height:700px){#frame{height:100dvh;width:min(100vw,calc(100dvh * 420 / 860));border-radius:0}#note{display:none}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070914;color:#fff;font-family:Inter,system-ui,"Microsoft YaHei",sans-serif}body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 8%,#38305c 0,#13172e 48%,#070812 100%)}#frame{width:min(100vw,430px);height:min(100dvh,900px);aspect-ratio:420/860;position:relative;overflow:hidden;border-radius:28px;box-shadow:0 28px 90px #000b,0 0 0 1px #ffffff25;background:#11142b}#game,#game canvas{width:100%;height:100%;display:block;touch-action:none}#note{position:fixed;bottom:7px;left:50%;transform:translateX(-50%);color:#b9bddb;font-size:11px;white-space:nowrap;opacity:.8}@media(max-height:700px){#frame{height:100dvh;width:min(100vw,calc(100dvh * 420 / 860));border-radius:0}#note{display:none}}
 </style><script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script></head>
-<body><div id="frame"><div id="game"></div></div><div id="note">戴上耳机 · 跟着鼓点 · 每关一种操作</div>
+<body><div id="frame"><div id="game"></div></div><div id="note">左右滑动躲避 · 跟着鼓点冲刺 · 荒诞事件随距离触发</div>
 <script>
 (()=>{'use strict';
 const W=420,H=860;
-const LEVELS=[
-{name:'苍蝇！离开吸血鬼的鼻子',type:'点击追击',desc:'点中乱飞的苍蝇！它会踩着鼓点逃跑。',bpm:108},
-{name:'超人登场，三连拍！',type:'点击踩点',desc:'等金色光圈收进圆环时，按下快门。',bpm:112},
-{name:'老板来了，快装忙！',type:'点击反应',desc:'警报亮起时狂点工作台；老板走了别乱动。',bpm:116},
-{name:'给鸽子戴上安全帽',type:'拖拽',desc:'把安全帽拖到鸽子头上，别砸到它的脚。',bpm:120},
-{name:'老奶奶的喷嚏要来了',type:'按住 / 松开',desc:'按住憋住喷嚏，在绿色区间松手。',bpm:124},
-{name:'把飞来的披萨打回去',type:'快速滑动',desc:'看箭头方向，快速把披萨拍飞！',bpm:128},
-{name:'双喷射器同时点火',type:'双指同时点击',desc:'同时按住左右喷射器，让超人冲上天。',bpm:132},
-{name:'吸血鬼赖床了',type:'摇晃手机',desc:'摇醒吸血鬼！桌面版可以点按钮模拟。',bpm:136},
-{name:'超人需要你的尖叫',type:'声音触发',desc:'对着手机大喊，或者点按钮模拟尖叫。',bpm:140}
-];
+const ASSETS=[['hero','hero.svg'],['pigeon','pigeon.svg'],['helmet','helmet.svg'],['oldman','oldman.svg'],['pizza','pizza.svg'],['fly','fly.svg'],['heroFly','hero_fly.svg'],['vampire','vampire.svg'],['shout','hero_shout.svg'],['banana','banana.svg'],['shades','banana_shades.svg'],['fish','fish.svg'],['liar','fish_lie.svg']];
 const COLORS=[0xff668c,0xffd34f,0x69e3c0,0x68c9ff,0xff789f,0xffb34f,0xb69aff,0x9a8cff,0xffdf61];
+const EVENTS=[
+{name:'苍蝇骑脸',type:'点击追击',desc:'点中乱飞的苍蝇！它正在跟鼓点跳舞。',goal:3,seconds:6},
+{name:'超人空中自拍',type:'踩点点击',desc:'超人正在坠落！踩准鼓点，抓拍落地瞬间。',goal:2,seconds:6},
+{name:'老板突然出现',type:'反应点击',desc:'只在红色警报亮起时点击，别让老板发现你摸鱼。',goal:2,seconds:6},
+{name:'鸽子安全帽',type:'路径拖动',desc:'沿黄色虚线拖动安全帽，把它放进绿色圆圈。',goal:1,seconds:7},
+{name:'老奶奶的喷嚏',type:'按住再松开',desc:'按住憋住喷嚏，保持一会儿再松手！',goal:1,seconds:6},
+{name:'披萨回旋镖',type:'快速滑动',desc:'看箭头方向，快速把飞来的披萨拍回去。',goal:2,seconds:6},
+{name:'双喷射器点火',type:'双指同时按',desc:'同时按住屏幕左右两边！桌面可以按 A + L。',goal:2,seconds:6},
+{name:'摇醒吸血鬼',type:'摇晃 / 连点',desc:'摇动手机，或连续点击下方区域两次。',goal:2,seconds:6},
+{name:'超人需要尖叫',type:'长按尖叫',desc:'长按下方按钮，替超人发出突破大气层的尖叫。',goal:1,seconds:6}
+];
 class Party extends Phaser.Scene{
-constructor(){super('party');this.objects=[];this.pulses=[];this.stage=-1;this.score=0;this.combo=0;this.best=0;this.quick=false;this.holding=false;this.holdMs=0;this.swipeStart=null;this.pad={left:null,right:null};this.dragItem=null;this.motionPrev=null;this.lastShakeAt=0;this.mic=null;this.micData=null;this.audio=null;this.master=null;this.noiseBuffer=null;this.nextStep=0;this.stepIndex=0;this.lastBeatMs=0;this.elapsed=0;this.hitCount=0;this.goal=4;this.lastFeedbackAt=0;this.lastShoutAt=0;this.keyboardDoubleLatched=false;}
-preload(){}
+constructor(){super('party');this.phase='loading';this.phaseObjects=[];this.hazards=[];this.streaks=[];this.audio=null;this.master=null;this.noiseBuffer=null;this.nextStep=0;this.stepIndex=0;this.lastBeatMs=0;this.beatNo=0;this.distance=0;this.score=0;this.lives=3;this.combo=0;this.bestCombo=0;this.lane=1;this.modeIndex=0;this.minisCompleted=0;this.nextMiniAt=1800;this.finishAt=0;this.invulnerableUntil=0;this.dashUntil=0;this.gesture=null;this.holding=false;this.holdStart=0;this.draggingHelmet=false;this.padDown={left:null,right:null};this.padHeld={left:false,right:false};this.lastShakeTap=0;this.miniHits=0;this.miniEnding=false;this.lastWrong=0;this.lastLane=1;this.lastShoutAt=0;this.motionPrev=null;this.lastMotionAt=0;}
 create(){
 this.drawBackdrop();this.input.addPointer(2);
-this.input.on('pointerdown',p=>this.onDown(p));this.input.on('pointerup',p=>this.onUp(p));
-this.input.on('drag',(p,obj,x,y)=>{if(obj===this.dragItem){obj.x=x;obj.y=y;}});
-this.input.on('dragend',(p,obj)=>{if(obj===this.dragItem){this.dragItem=null;const d=Phaser.Math.Distance.Between(obj.x,obj.y,190,390);if(d<65){this.actionSuccess('安全帽！鸽子现在是工地监理了。');if(this.pigeonTarget){this.pigeonTarget.setFillStyle(0x63f5c8,.5);this.tweens.add({targets:this.pigeonTarget,scale:1.28,duration:130,yoyo:true,ease:'Back.Out'});}this.resetHelmet();}else{this.actionMiss('没放进绿色圆圈！沿虚线拖到鸽子头顶。');this.dragItem=obj;this.tweens.add({targets:obj,x:this.helmetHome.x,y:this.helmetHome.y,angle:-5,duration:180,ease:'Back.Out',onComplete:()=>{if(obj&&obj.active&&this.stage===3)this.dragItem=obj;}});if(this.pigeonTarget)this.pigeonTarget.setStrokeStyle(4,0xff668c,1);}}});
+this.input.on('pointerdown',p=>this.handleDown(p));this.input.on('pointerup',p=>this.handleUp(p));this.input.on('pointermove',p=>this.handleMove(p));
 this.keys=this.input.keyboard.addKeys({A:Phaser.Input.Keyboard.KeyCodes.A,L:Phaser.Input.Keyboard.KeyCodes.L,SPACE:Phaser.Input.Keyboard.KeyCodes.SPACE});
 this.motionHandler=e=>this.onMotion(e);window.addEventListener('devicemotion',this.motionHandler,{passive:true});
-this.loadSvgSprites().then(()=>this.showTitle()).catch(err=>{this.clearObjects();this.txt(210,350,'角色资产加载失败',25,'#ff9ba8');this.txt(210,405,String(err&&err.message||err).slice(0,100),13,'#ffffff',.5,'normal');});
+this.loadSprites().then(()=>this.showTitle()).catch(e=>{this.clearPhase();this.phase='error';this.text(210,350,'角色资产加载失败',25,'#ff9ba8');this.text(210,405,String(e&&e.message||e).slice(0,100),13,'#fff');});
 }
 drawBackdrop(){
-const g=this.add.graphics();g.fillGradientStyle(0x211b43,0x211b43,0x0b1026,0x0b1026,1);g.fillRect(0,0,W,H);
-g.fillStyle(0x7053bf,.11);g.fillCircle(40,235,170);g.fillStyle(0x2bb7b2,.08);g.fillCircle(390,530,200);
-for(let i=0;i<58;i++){const x=(i*79+23)%W,y=(i*137+51)%H;g.fillStyle(i%4===0?0xffd84d:0xffffff,.12+(i%4)*.045);g.fillCircle(x,y,i%6===0?2.2:1);}
-const floor=this.add.graphics();floor.lineStyle(1,0x98a6ff,.08);for(let y=690;y<860;y+=24)floor.lineBetween(0,y,W,y);for(let x=-240;x<680;x+=55)floor.lineBetween(210,690,x,860);
+const g=this.add.graphics();g.fillGradientStyle(0x26204a,0x26204a,0x090d20,0x090d20,1);g.fillRect(0,0,W,H);
+g.fillStyle(0x7a4cba,.10);g.fillCircle(20,230,190);g.fillStyle(0x20bcb7,.07);g.fillCircle(400,550,220);
+for(let i=0;i<72;i++){g.fillStyle(i%5===0?0xffd84d:0xffffff,.12+(i%4)*.035);g.fillCircle((i*79+23)%W,(i*137+51)%H,i%7===0?2.2:1);}
+this.backdrop=g;
 }
-async loadSvgSprites(){
-const assets=[['hero','hero.svg'],['banana','banana.svg'],['shades','banana_shades.svg'],['fish','fish.svg'],['liar','fish_lie.svg'],['pigeon','pigeon.svg'],['helmet','helmet.svg'],['oldman','oldman.svg'],['pizza','pizza.svg'],['fly','fly.svg'],['heroFly','hero_fly.svg'],['vampire','vampire.svg'],['shout','hero_shout.svg']];
-for(const [key,path] of assets){const response=await fetch('assets/'+path,{cache:'no-store'});if(!response.ok)throw new Error(path+' HTTP '+response.status);const svg=await response.text();const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(path+' SVG 解码失败'));img.src=url;});const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,256);ctx.drawImage(img,0,0,256,256);if(this.textures.exists(key))this.textures.remove(key);this.textures.addCanvas(key,canvas);}finally{URL.revokeObjectURL(url);}}
+async loadSprites(){
+for(const [key,path] of ASSETS){const response=await fetch('assets/'+path,{cache:'no-store'});if(!response.ok)throw new Error(path+' HTTP '+response.status);const svg=await response.text();const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(path+' SVG 解码失败'));img.src=url;});const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,256,256);if(this.textures.exists(key))this.textures.remove(key);this.textures.addCanvas(key,canvas);}finally{URL.revokeObjectURL(url);}}
 }
-track(o){this.objects.push(o);return o;}
-clearObjects(){this.objects.forEach(o=>{try{if(o&&o.destroy)o.destroy();}catch(e){}});this.objects=[];this.pulses=[];this.eqBars=[];this.barGraphics=null;this.hitText=null;this.timeText=null;this.progress=null;this.alertText=null;}
-txt(x,y,text,size=20,color='#fff',origin=.5,weight='bold'){return this.track(this.add.text(x,y,text,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:size+'px',fontStyle:weight,color,align:'center',wordWrap:{width:350},lineSpacing:5}).setOrigin(origin,.5));}
-button(x,y,w,h,label,fn,color=0x6b58d6){
-const c=this.add.container(x,y),g=this.add.graphics();
-const paint=(fill,stroke=0xffffff,alpha=.28)=>{g.clear();g.fillStyle(fill,1);g.fillRoundedRect(-w/2,-h/2,w,h,18);g.lineStyle(2,stroke,alpha);g.strokeRoundedRect(-w/2,-h/2,w,h,18);};paint(color);
-const shine=this.add.rectangle(0,-h/2+5,w-18,3,0xffffff,.18).setOrigin(.5,0);
-const t=this.add.text(0,0,label,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:'17px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-22}}).setOrigin(.5);
-c.add([g,shine,t]);c.setSize(w,h);c.setInteractive(new Phaser.Geom.Rectangle(-w/2,-h/2,w,h),Phaser.Geom.Rectangle.Contains);
-let down=false;
-c.on('pointerdown',()=>{down=true;this.tweens.killTweensOf(c);this.tweens.add({targets:c,scaleX:.96,scaleY:.93,duration:65,ease:'Quad.Out'});paint(Phaser.Display.Color.IntegerToColor(color).brighten(22).color,0xffffff,.8);});
-c.on('pointerup',()=>{if(!down)return;down=false;this.tweens.killTweensOf(c);this.tweens.add({targets:c,scaleX:1.035,scaleY:1.04,duration:80,yoyo:true,ease:'Back.Out',onComplete:()=>{c.setScale(1);paint(color);}});this.tweens.add({targets:shine,alpha:.5,duration:90,yoyo:true});try{fn();}catch(e){this.feedback('操作没有成功触发，请再试一次。',false);}});
-c.on('pointerupoutside',()=>{down=false;this.tweens.killTweensOf(c);this.tweens.add({targets:c,scaleX:1,scaleY:1,duration:100});paint(color);});
-c.on('pointerover',()=>{if(!down)paint(Phaser.Display.Color.IntegerToColor(color).brighten(10).color,0xffffff,.55);});
-c.on('pointerout',()=>{if(!down)paint(color);});
-return this.track(c);
+track(o){this.phaseObjects.push(o);return o;}
+clearPhase(){for(const o of this.phaseObjects){try{this.tweens.killTweensOf(o);if(o&&o.destroy)o.destroy();}catch(e){}}this.phaseObjects=[];this.hazards=[];this.streaks=[];this.player=null;this.hudDistance=null;this.hudScore=null;this.hudLives=null;this.hudMode=null;this.hudTimer=null;this.hudProgress=null;this.hudHits=null;this.hudBeatDots=[];this.flyTarget=null;this.helmet=null;this.pigeonTarget=null;this.miniHero=null;this.miniBoss=null;this.miniAlert=null;this.photoRing=null;this.holdMarker=null;this.feedbackContainer=null;this.draggingHelmet=false;}
+text(x,y,str,size=18,color='#fff',origin=.5,weight='bold'){return this.track(this.add.text(x,y,str,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:size+'px',fontStyle:weight,color,align:'center',wordWrap:{width:350},lineSpacing:4}).setOrigin(origin,.5));}
+image(key,x,y,w,h,angle=0){return this.track(this.add.image(x,y,key).setDisplaySize(w,h).setAngle(angle));}
+button(x,y,w,h,label,fn,color=0x7655e8){
+const c=this.add.container(x,y),g=this.add.graphics();const paint=(fill,stroke=0xffffff,alpha=.32)=>{g.clear();g.fillStyle(fill,1);g.fillRoundedRect(-w/2,-h/2,w,h,17);g.lineStyle(2,stroke,alpha);g.strokeRoundedRect(-w/2,-h/2,w,h,17);};paint(color);
+const shine=this.add.rectangle(0,-h/2+5,w-18,3,0xffffff,.2).setOrigin(.5,0);const t=this.add.text(0,0,label,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:'17px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-22}}).setOrigin(.5);c.add([g,shine,t]);c.setSize(w,h);c.setInteractive(new Phaser.Geom.Rectangle(-w/2,-h/2,w,h),Phaser.Geom.Rectangle.Contains);
+let down=false;c.on('pointerdown',()=>{down=true;this.tweens.killTweensOf(c);this.tweens.add({targets:c,scaleX:.96,scaleY:.93,duration:65,ease:'Quad.Out'});paint(Phaser.Display.Color.IntegerToColor(color).brighten(22).color,0xffffff,.8);});c.on('pointerup',()=>{if(!down)return;down=false;this.tweens.killTweensOf(c);this.tweens.add({targets:c,scaleX:1.04,scaleY:1.04,duration:80,yoyo:true,ease:'Back.Out',onComplete:()=>{c.setScale(1);paint(color);}});try{fn();}catch(e){this.feedback('操作没有成功触发，请再试一次。',false);}});c.on('pointerupoutside',()=>{down=false;this.tweens.killTweensOf(c);this.tweens.add({targets:c,scaleX:1,scaleY:1,duration:100});paint(color);});c.on('pointerover',()=>{if(!down)paint(Phaser.Display.Color.IntegerToColor(color).brighten(10).color,0xffffff,.6);});c.on('pointerout',()=>{if(!down)paint(color);});return this.track(c);
 }
-image(key,x,y,w,h,angle=0){const o=this.track(this.add.image(x,y,key).setDisplaySize(w,h).setAngle(angle));this.pulses.push({o,baseAngle:angle});return o;}
 showTitle(){
-this.clearObjects();this.stage=-1;this.hitCount=0;
-this.addGlow(210,290,170,0x7655e8,.18);this.image('hero',205,274,190,196,-4);this.image('fly',95,336,52,52,12);this.image('vampire',319,350,100,120,5);
-this.txt(210,76,'节拍疯人秀',38,'#ffdf61');this.txt(210,123,'BEAT BONKERS',15,'#b9b2ff');
-this.txt(210,438,'9 关 · 9 种操作 · 一路加速',20,'#ffffff');this.txt(210,478,'每个人都在跳，没人知道为什么。',14,'#b9c2e3',.5,'normal');
-this.button(210,583,282,62,'开始完整节奏  ·  约 2 分钟',()=>{this.quick=false;this.startAudio();this.startRun();},0x7655e8);
-this.button(210,662,282,54,'快速预览  ·  每关 5 秒',()=>{this.quick=true;this.startAudio();this.startRun();},0x247e8a);
-this.txt(210,753,'跟着鼓点看热闹，操作越玩越离谱。',12,'#a0a9d0',.5,'normal');
+this.clearPhase();this.phase='title';
+const glow=this.track(this.add.circle(210,300,165,0x7957e9,.15));this.tweens.add({targets:glow,scale:1.13,alpha:.08,duration:850,yoyo:true,repeat:-1});
+this.image('heroFly',205,280,182,192,-8);this.image('fly',94,332,48,48,12);this.image('vampire',320,356,105,125,6);this.image('pizza',95,430,64,64,-16);this.image('helmet',325,468,62,52,12);
+this.text(210,72,'节拍疯人秀',39,'#ffdf61');this.text(210,120,'BEAT BONKERS',15,'#b9b2ff');
+this.text(210,490,'一路坠落 · 倒挂攀爬 · 重力失控',17,'#fff');
+this.text(210,527,'跑酷推进距离，荒诞小游戏突然打断！',14,'#c3c9e9',.5,'normal');
+this.button(210,610,286,62,'开始失控跑酷',()=>{this.startAudio();this.startRun();},0x7655e8);
+this.button(210,685,286,54,'练习一轮 · 快速预览',()=>{this.quick=true;this.startAudio();this.startRun();},0x247e8a);
+this.text(210,771,'左右滑动换道 · 踩准鼓点点击冲刺',12,'#9ca8d1',.5,'normal');
 }
-addGlow(x,y,r,color,alpha){const c=this.track(this.add.circle(x,y,r,color,alpha));return c;}
 startAudio(){
-try{if(!this.audio){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;this.audio=new C();this.master=this.audio.createGain();this.master.gain.value=.62;this.master.connect(this.audio.destination);this.noiseBuffer=this.audio.createBuffer(1,Math.floor(this.audio.sampleRate*.5),this.audio.sampleRate);const data=this.noiseBuffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;}if(this.audio.state==='suspended')this.audio.resume();this.nextStep=this.audio.currentTime+.08;this.stepIndex=0;}catch(e){}
+try{if(!this.audio){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;this.audio=new C();this.master=this.audio.createGain();this.master.gain.value=.55;this.master.connect(this.audio.destination);this.noiseBuffer=this.audio.createBuffer(1,Math.floor(this.audio.sampleRate*.5),this.audio.sampleRate);const d=this.noiseBuffer.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}if(this.audio.state==='suspended')this.audio.resume();this.nextStep=this.audio.currentTime+.08;this.stepIndex=0;}catch(e){}
 }
-envGain(g,t,peak,duration){g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,peak),t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+duration);}
-playKick(t,accent){
-if(!this.audio||!this.master)return;const o=this.audio.createOscillator(),g=this.audio.createGain();o.type='sine';o.frequency.setValueAtTime(accent?155:125,t);o.frequency.exponentialRampToValueAtTime(42,t+.16);this.envGain(g,t,accent?.42:.28,.19);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+.21);
-const b=this.audio.createOscillator(),bg=this.audio.createGain();b.type='triangle';b.frequency.setValueAtTime([55,65.4,73.4,49][Math.floor(this.stepIndex/2)%4],t);this.envGain(bg,t,accent?.12:.075,.23);b.connect(bg);bg.connect(this.master);b.start(t);b.stop(t+.25);
-}
-playNoise(t,peak,duration,filterType,frequency){
-if(!this.audio||!this.noiseBuffer)return;const src=this.audio.createBufferSource(),filter=this.audio.createBiquadFilter(),g=this.audio.createGain();src.buffer=this.noiseBuffer;filter.type=filterType;filter.frequency.value=frequency;this.envGain(g,t,peak,duration);src.connect(filter);filter.connect(g);g.connect(this.master);src.start(t);src.stop(t+duration+.02);
-}
-playHat(t){this.playNoise(t,.045,.035,'highpass',7200);}
-playSnare(t){this.playNoise(t,.19,.14,'bandpass',1900);const o=this.audio.createOscillator(),g=this.audio.createGain();o.type='triangle';o.frequency.setValueAtTime(185,t);o.frequency.exponentialRampToValueAtTime(95,t+.08);this.envGain(g,t,.09,.11);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+.13);}
+envGain(g,t,peak,dur){g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,peak),t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+dur);}
+kick(t,accent){if(!this.audio||!this.master)return;const o=this.audio.createOscillator(),g=this.audio.createGain();o.type='sine';o.frequency.setValueAtTime(accent?155:125,t);o.frequency.exponentialRampToValueAtTime(42,t+.16);this.envGain(g,t,accent?.36:.24,.19);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+.21);const b=this.audio.createOscillator(),bg=this.audio.createGain();b.type='triangle';b.frequency.setValueAtTime([55,65.4,73.4,49][Math.floor(this.stepIndex/2)%4],t);this.envGain(bg,t,accent?.1:.06,.23);b.connect(bg);bg.connect(this.master);b.start(t);b.stop(t+.25);}
+noise(t,peak,dur,type,freq){if(!this.audio||!this.noiseBuffer)return;const src=this.audio.createBufferSource(),filter=this.audio.createBiquadFilter(),g=this.audio.createGain();src.buffer=this.noiseBuffer;filter.type=type;filter.frequency.value=freq;this.envGain(g,t,peak,dur);src.connect(filter);filter.connect(g);g.connect(this.master);src.start(t);src.stop(t+dur+.02);}
+snare(t){this.noise(t,.15,.12,'bandpass',1800);const o=this.audio.createOscillator(),g=this.audio.createGain();o.type='triangle';o.frequency.setValueAtTime(185,t);o.frequency.exponentialRampToValueAtTime(95,t+.08);this.envGain(g,t,.07,.1);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+.12);}
+currentBpm(){return Math.min(152,112+Math.floor(this.distance/1200)*2);}
 onBeat(){
-this.lastBeatMs=this.time.now;this.beatNo=(this.beatNo||0)+1;
-const color=COLORS[Math.max(0,Math.min(8,this.stage))]||0xffdf61;
-const ring=this.add.circle(210,460,64,0xffffff,0.001).setStrokeStyle(this.beatNo%4===1?5:3,color,this.beatNo%4===1?.9:.55);this.track(ring);
-this.tweens.add({targets:ring,scaleX:2.05,scaleY:2.05,alpha:0,duration:360,ease:'Sine.Out',onComplete:()=>ring.destroy()});
-this.pulses.forEach((p,i)=>{if(!p.o||!p.o.active)return;const o=p.o;if(o===this.flyTarget||o===this.fallingHero)return;this.tweens.add({targets:o,y:o.y-13,angle:p.baseAngle+((this.beatNo%2)?4:-4),duration:95,ease:'Quad.Out',yoyo:true,hold:45});});
-if(this.eqBars){this.eqBars.forEach((b,i)=>{if(b&&b.active){const h=8+((i*7+this.beatNo*11)%34);this.tweens.add({targets:b,scaleY:h/20,duration:100,yoyo:true,hold:80});}});}
-if(this.stage===0&&this.flyTarget&&this.beatNo%2===0)this.moveFly();if(this.stage===1&&this.photoInner&&this.photoInner.active){this.photoInner.setScale(1.25);this.tweens.add({targets:this.photoInner,scale:.62,duration:210,ease:'Quad.In'});}
+this.lastBeatMs=this.time.now;this.beatNo++;
+const c=COLORS[Math.min(8,Math.floor(this.distance/1900))];
+if(this.phase==='run'&&this.player&&this.player.active){const ring=this.add.circle(this.player.x,this.player.y,42,0xffffff,.001).setStrokeStyle(3,c,.85).setDepth(30);this.tweens.add({targets:ring,scale:2.4,alpha:0,duration:300,onComplete:()=>ring.destroy()});}
+const top=this.add.rectangle(210,6,W,12,c,.14).setDepth(50);this.tweens.add({targets:top,alpha:0,duration:160,onComplete:()=>top.destroy()});
+if(this.hudBeatDots&&this.hudBeatDots.length){const k=this.beatNo%4;this.hudBeatDots.forEach((d,i)=>{d.setFillStyle(i===k?c:0x5a6285,i===k?1:.5);d.setScale(i===k?1.45:1);});}
+if(this.phase==='mini'&&this.miniType===1&&this.miniHero&&this.miniHero.active){this.tweens.add({targets:this.miniHero,angle:this.miniHero.angle+7,duration:75,yoyo:true});}
 }
-startRun(){this.score=0;this.combo=0;this.best=0;this.beatNo=0;this.startStage(0);}
-startStage(i){
-if(this.mic){this.mic.stream.getTracks().forEach(t=>t.stop());this.mic.ctx.close();this.mic=null;this.micData=null;}
-this.clearObjects();this.stage=i;this.stageFinished=false;this.holding=false;this.holdMs=0;this.swipeStart=null;this.pad={left:null,right:null};this.elapsed=0;this.duration=this.quick?5000:14000;this.hitCount=0;this.goal=this.quick?1:4;this.lastWrong=0;this.lastShakeAt=0;this.lastShoutAt=0;this.keyboardDoubleLatched=false;
-if(i>=LEVELS.length){this.showResults();return;}
-const L=LEVELS[i];this.drawStageDecor(i);
-this.txt(24,30,'关卡 '+String(i+1).padStart(2,'0')+' / 09',12,'#aeb6da',0,'bold');
-this.txt(210,66,L.name,25,'#ffdf61');
-this.txt(210,106,L.desc,14,'#e4e8ff',.5,'normal');
-this.txt(30,145,L.type,12,'#69e3c0',0,'bold');this.txt(389,145,L.bpm+' BPM',12,'#c0b4ff',1,'bold');
-this.track(this.add.rectangle(210,169,350,6,0x353a5e).setStrokeStyle(1,0xffffff,.1));this.progress=this.track(this.add.rectangle(35,169,0,6,0x6be4c1).setOrigin(0,.5));
-this.hitText=this.txt(26,197,'命中 0 / '+this.goal,12,'#b8c3e8',0,'bold');this.timeText=this.txt(394,197,'14.0s',12,'#b8c3e8',1,'bold');
-this.eqBars=[];for(let j=0;j<18;j++){const b=this.track(this.add.rectangle(25+j*22,827,9,15+(j%3)*4,COLORS[i],.25).setOrigin(.5,1));this.eqBars.push(b);}
-this.beatDots=[];for(let j=0;j<4;j++){const d=this.track(this.add.circle(171+j*26,224,5,0x5b6284,.6));this.beatDots.push(d);}
-if(i===0)this.stageFly();if(i===1)this.stagePhoto();if(i===2)this.stageBoss();if(i===3)this.stagePigeon();if(i===4)this.stageSneeze();if(i===5)this.stagePizza();if(i===6)this.stagePads();if(i===7)this.stageShake();if(i===8)this.stageShout();
+startRun(){
+this.quick=!!this.quick;this.distance=0;this.score=0;this.lives=3;this.combo=0;this.bestCombo=0;this.lane=1;this.modeIndex=0;this.minisCompleted=0;this.nextMiniAt=this.quick?650:1800;this.finishAt=0;this.invulnerableUntil=0;this.dashUntil=0;this.beatNo=0;this.lastBeatMs=this.time.now;this.previousLane=1;this.nextHazardDistance=250;this.startRunSegment(true);
 }
-drawStageDecor(i){
-const color=COLORS[i];this.addGlow(210,420,200,color,.075);
-const panel=this.track(this.add.rectangle(210,490,366,510,0x171a38,.78).setStrokeStyle(2,color,.22));
-const g=this.track(this.add.graphics());g.lineStyle(2,color,.12);g.beginPath();g.moveTo(28,690);g.lineTo(392,690);g.strokePath();
-for(let k=0;k<5;k++){const x=40+k*85;const beam=this.track(this.add.triangle(x,320,0,0,52,0,26,230,color,.025));this.tweens.add({targets:beam,angle:k%2?8:-8,duration:1100+k*100,yoyo:true,repeat:-1,ease:'Sine.InOut'});}
+modeForDistance(){return Math.floor(this.distance/2600)%3;}
+modeInfo(i){return [{name:'自由坠落',short:'FALL',y:620,texture:'heroFly',angle:-8,dir:1},{name:'倒挂攀爬',short:'CLIMB',y:290,texture:'hero',angle:174,dir:-1},{name:'重力失控',short:'FLIP',y:450,texture:'heroFly',angle:180,dir:1}][i];}
+startRunSegment(first){
+this.clearPhase();this.phase='run';this.gesture=null;this.holding=false;this.padDown={left:null,right:null};this.padHeld={left:false,right:false};
+this.modeIndex=this.modeForDistance();const mode=this.modeInfo(this.modeIndex);
+const panel=this.track(this.add.graphics());panel.fillStyle(0x11152f,.72);panel.fillRoundedRect(18,190,384,520,28);panel.lineStyle(2,COLORS[this.modeIndex],.35);panel.strokeRoundedRect(18,190,384,520,28);
+const rails=this.track(this.add.graphics());rails.lineStyle(2,COLORS[this.modeIndex],.23);rails.beginPath();rails.moveTo(67,225);rails.lineTo(67,680);rails.moveTo(353,225);rails.lineTo(353,680);rails.strokePath();
+for(let i=0;i<12;i++){const x=[105,210,315][i%3]+Phaser.Math.Between(-17,17),y=Phaser.Math.Between(225,675);const st=this.track(this.add.rectangle(x,y,2,Phaser.Math.Between(20,52),COLORS[this.modeIndex],.22));this.streaks.push(st);}
+this.player=this.image(mode.texture,[105,210,315][this.lane],mode.y,116,124,mode.angle);this.player.setDepth(12);
+this.playerGlow=this.track(this.add.circle(this.player.x,this.player.y,60,COLORS[this.modeIndex],.09).setDepth(10));
+this.hudDistance=this.text(28,31,'距离 000m',13,'#dce2ff',0);this.hudScore=this.text(210,31,'分数 '+this.score,13,'#ffdf61');this.hudLives=this.text(392,31,'♥ ♥ ♥',15,'#ff809f',1);
+this.hudMode=this.text(210,76,mode.name,24,'#ffdf61');this.text(210,112,'左右滑动换道',12,'#c6cde9',.5,'normal');
+this.text(210,145,'踩准鼓点点击 = 冲刺 / 清除近处障碍',12,'#8d9ac7',.5,'normal');
+this.hudBeatDots=[];for(let i=0;i<4;i++)this.hudBeatDots.push(this.track(this.add.circle(171+i*26,173,5,0x5a6285,.55)));
+this.text(210,742,'距离触发荒诞事件 · 失败会消耗生命',12,'#9ca8d1',.5,'normal');
+this.track(this.add.rectangle(210,810,360,4,0x3b426a,.9));this.hudProgress=this.track(this.add.rectangle(30,810,0,4,0x69e3c0,1).setOrigin(0,.5));
+this.modeSwitchAt=(Math.floor(this.distance/2600)+1)*2600;
+if(first){this.nextHazardDistance=260;}else{this.nextHazardDistance=this.distance+280;}
 }
-stageFly(){
-this.image('vampire',210,427,166,185,3);this.txt(210,557,'鼻子上的苍蝇，烦死了！',15,'#b9c3e7',.5,'normal');
-this.flyTarget=this.image('fly',210,335,62,62,0);this.flyTarget.setInteractive({useHandCursor:true});this.flyTarget.on('pointerdown',()=>{this.actionSuccess('啪！苍蝇飞出了爵士乐队。');this.tweens.add({targets:this.flyTarget,angle:this.flyTarget.angle+300,scale:.25,alpha:.2,duration:130,onComplete:()=>{if(this.flyTarget&&this.flyTarget.active){this.flyTarget.setAlpha(1).setScale(.24);this.moveFly(true);this.tweens.add({targets:this.flyTarget,scale:1,duration:180,ease:'Back.Out'});}}});});
-this.moveFly(true);
+switchMode(next){
+if(next===this.modeIndex)return;this.modeIndex=next;const m=this.modeInfo(next);
+for(const h of this.hazards){if(h.ring)h.ring.destroy();if(h.sprite)h.sprite.destroy();}this.hazards=[];
+if(this.player&&this.player.active){this.player.setTexture(m.texture);this.player.setAngle(m.angle);this.tweens.add({targets:this.player,y:m.y,angle:m.angle,duration:320,ease:'Back.Out'});}
+if(this.hudMode)this.hudMode.setText(m.name);
+if(this.hudMode)this.hudMode.setColor('#'+COLORS[next].toString(16).padStart(6,'0'));
+this.feedback('重力转换：'+m.name,true);this.nextHazardDistance=this.distance+320;
 }
-moveFly(initial){if(!this.flyTarget||!this.flyTarget.active)return;const x=initial?250:Phaser.Math.Between(65,350),y=initial?320:Phaser.Math.Between(315,495);this.tweens.add({targets:this.flyTarget,x,y,angle:Phaser.Math.Between(-35,35),duration:initial?1:210,ease:'Back.Out'});}
-stagePhoto(){
-this.addGlow(210,408,118,0xffd84d,.1);
-this.txt(210,548,'超人从天而降！落地时踩点拍照。',15,'#c2c8e7',.5,'normal');
-this.track(this.add.rectangle(210,514,340,4,0xffd34f,.45));
-this.fallShadow=this.track(this.add.ellipse(210,520,78,18,0x050817,.32));
-for(let i=0;i<9;i++){const x=45+i*41;const streak=this.track(this.add.rectangle(x,Phaser.Math.Between(250,440),2,Phaser.Math.Between(20,55),0xb9c6ff,.25));this.tweens.add({targets:streak,y:625,duration:Phaser.Math.Between(700,1200),repeat:-1,onRepeat:()=>{if(streak.active){streak.y=235;streak.x=Phaser.Math.Between(28,392);}}});}
-this.fallingHero=this.image('hero',210,300,184,198,-9);this.fallBaseX=this.fallingHero.scaleX;this.fallBaseY=this.fallingHero.scaleY;this.fallLoop();
-const outer=this.track(this.add.circle(210,430,65,0xffffff,.02).setStrokeStyle(4,0xffffff,.65));this.photoOuter=outer;
-const inner=this.track(this.add.circle(210,430,105,0xffffff,.01).setStrokeStyle(3,0xffd84d,.85));this.photoInner=inner;
-this.button(210,676,230,68,'📸  拍照！',()=>this.tryPhoto(),0x8d59d8);
-this.txt(210,744,'金色圈收进白色圈时得分最高',12,'#929fc9',.5,'normal');
+spawnHazard(){
+let lane=Phaser.Math.Between(0,2);if(lane===this.lastLane)lane=(lane+Phaser.Math.Between(1,2))%3;this.lastLane=lane;
+const mode=this.modeInfo(this.modeIndex);let dir=mode.dir;if(this.modeIndex===2)dir=Math.random()<.5?1:-1;
+const y=dir>0?-75:H+75;const keys=['banana','pizza','helmet','fish','fly'];const key=keys[Phaser.Math.Between(0,keys.length-1)];
+const x=[105,210,315][lane];const ring=this.track(this.add.circle(x,y,42,COLORS[Phaser.Math.Between(0,8)],.12));ring.setDepth(3);
+const sprite=this.image(key,x,y,65,65,Phaser.Math.Between(-24,24));sprite.setDepth(4);
+this.hazards.push({lane,y,dir,ring,sprite,hit:false});
 }
-fallLoop(){
-if(this.stage!==1||!this.fallingHero||!this.fallingHero.active)return;
-const h=this.fallingHero;h.setPosition(210,286).setAngle(-12).setScale(this.fallBaseX,this.fallBaseY);
-this.tweens.add({targets:h,y:410,angle:8,duration:650,ease:'Quad.In',onUpdate:()=>{if(this.fallShadow&&this.fallShadow.active){const k=Phaser.Math.Clamp((h.y-286)/124,0,1);this.fallShadow.setScale(.6+k*.8,.7+k*.3);this.fallShadow.setAlpha(.12+k*.28);}},onComplete:()=>{if(this.stage!==1||!h.active)return;this.capsuleBurst(210,505,0xffd34f);this.tweens.add({targets:h,scaleX:this.fallBaseX*1.12,scaleY:this.fallBaseY*.88,y:395,duration:90,yoyo:true,ease:'Quad.Out'});this.time.delayedCall(450,()=>this.fallLoop());}});
+updateRun(delta){
+const dt=delta/1000;this.distance+=(this.quick?1.6:1)*dt*(160+Math.min(100,this.distance/125));
+const speed=160+Math.min(100,this.distance/125);const mode=this.modeInfo(this.modeIndex);
+if(this.hudDistance)this.hudDistance.setText('距离 '+Math.floor(this.distance/10)+'m');if(this.hudScore)this.hudScore.setText('分数 '+this.score);if(this.hudLives)this.hudLives.setText('♥ '.repeat(Math.max(0,this.lives)).trim()||'♡ ♡ ♡');
+if(this.hudProgress)this.hudProgress.width=350*Math.min(1,this.distance/(this.finishAt||this.nextMiniAt||18000));
+const wantedMode=this.modeForDistance();if(wantedMode!==this.modeIndex)this.switchMode(wantedMode);
+const flow=this.modeInfo(this.modeIndex).dir;
+for(const st of this.streaks){st.y+=flow*speed*dt*.68;if(st.y>700)st.y=215;if(st.y<215)st.y=700;}
+if(this.player&&this.player.active){this.playerGlow.setPosition(this.player.x,this.player.y);this.playerGlow.setFillStyle(COLORS[this.modeIndex],this.time.now<this.dashUntil?.24:.09);if(this.time.now<this.invulnerableUntil)this.player.setAlpha(Math.floor(this.time.now/75)%2?.25:1);else this.player.setAlpha(1);}
+if(this.distance>=this.nextHazardDistance){this.spawnHazard();this.nextHazardDistance+=Phaser.Math.Between(470,680);}
+for(let i=this.hazards.length-1;i>=0;i--){const h=this.hazards[i];h.y+=h.dir*speed*dt*1.25;h.ring.y=h.y;h.sprite.y=h.y;h.sprite.angle+=h.dir*dt*55;h.ring.alpha=.08+Math.abs(Math.sin(this.time.now/150))*.12;
+if(!h.hit&&h.lane===this.lane&&Math.abs(h.y-this.player.y)<48&&this.time.now>this.invulnerableUntil&&this.time.now>this.dashUntil){h.hit=true;this.hitObstacle(h);}
+if(h.y>H+120||h.y< -120||h.hit){h.ring.destroy();h.sprite.destroy();this.hazards.splice(i,1);}}
+if(this.distance>=this.nextMiniAt&&this.minisCompleted<EVENTS.length){this.beginMini(this.minisCompleted);return;}
+if(this.minisCompleted>=EVENTS.length&&this.finishAt>0&&this.distance>=this.finishAt){this.showResults(true);return;}
 }
-tryPhoto(){
-const bpm=LEVELS[this.stage].bpm,period=60000/bpm;let dt=Math.max(0,this.time.now-this.lastBeatMs);dt=Math.min(dt,Math.abs(period-dt));if(dt<170)this.actionSuccess(dt<85?'完美踩拍！超人闪瞎全场。':'踩准了！摄影师获得工伤补贴。');else this.actionMiss('慢半拍！听鼓点再按快门。');
-if(this.photoOuter){this.photoOuter.setStrokeStyle(5,dt<170?0x63f5c8:0xff668c,1);this.time.delayedCall(140,()=>{if(this.photoOuter&&this.photoOuter.active)this.photoOuter.setStrokeStyle(4,0xffffff,.65);});}
+hitObstacle(h){
+this.lives--;this.combo=0;this.invulnerableUntil=this.time.now+1000;this.feedback('撞上了！'+(this.lives>0?'还剩 '+this.lives+' 次机会。':'跑酷结束！'),false);this.score=Math.max(0,this.score-80);
+if(this.player){this.tweens.add({targets:this.player,x:this.player.x+12,duration:55,yoyo:true,repeat:3});this.player.setTint(0xff668c);this.time.delayedCall(280,()=>{if(this.player&&this.player.active)this.player.clearTint();});}
+if(this.lives<=0)this.time.delayedCall(450,()=>this.showResults(false));
 }
-stageBoss(){
-this.image('oldman',210,394,150,170,0);this.bossSprite=this.image('vampire',210,390,170,180,0);this.bossSprite.setVisible(false);
-this.track(this.add.rectangle(210,545,260,60,0x222641).setStrokeStyle(2,0x7983ad,.4));this.txt(210,545,'摸鱼工作台',18,'#dfe5ff');
-this.alertText=this.txt(210,610,'☕ 老板还没来，喝口咖啡',16,'#9fb1d8',.5,'normal');this.bossAlert=false;
-this.txt(210,686,'只在红色警报亮起时点击屏幕！',13,'#b7c1e2',.5,'normal');
+changeLane(dir){
+if(this.phase!=='run'||!this.player)return;const next=Phaser.Math.Clamp(this.lane+dir,0,2);if(next===this.lane)return;
+this.lane=next;this.tweens.add({targets:this.player,x:[105,210,315][next],duration:100,ease:'Quad.Out'});
+const period=60000/this.currentBpm();let d=Math.abs(this.time.now-this.lastBeatMs);d=Math.min(d,Math.abs(period-d));
+if(d<155){this.score+=50;this.combo++;this.bestCombo=Math.max(this.bestCombo,this.combo);this.feedback('踩拍换道！+50',true);this.capsuleBurst(this.player.x,this.player.y,COLORS[this.modeIndex]);}
 }
-stagePigeon(){
-this.image('pigeon',210,438,188,188,-2);
-this.pigeonTarget=this.track(this.add.circle(190,390,43,0x63f5c8,.07).setStrokeStyle(3,0x63f5c8,.95));
-this.tweens.add({targets:this.pigeonTarget,scale:1.16,alpha:.35,duration:480,yoyo:true,repeat:-1,ease:'Sine.InOut'});
-this.txt(210,263,'沿虚线向下拖动',16,'#ffdf61');
-this.txt(210,564,'把帽子中心拖进绿色圆圈',16,'#c0c8e9',.5,'normal');
-this.helmetHome={x:210,y:310};this.drawDragGuide();this.resetHelmet();
-this.txt(210,675,'拖动时会显示落点；松手后自动判断。',12,'#8e9bc6',.5,'normal');
+tryBeatDash(){
+const period=60000/this.currentBpm();let d=Math.abs(this.time.now-this.lastBeatMs);d=Math.min(d,Math.abs(period-d));
+if(d<145){this.score+=75;this.combo++;this.bestCombo=Math.max(this.bestCombo,this.combo);this.dashUntil=this.time.now+720;this.feedback('完美踩拍！冲刺！',true);this.capsuleBurst(this.player.x,this.player.y,0xffdf61);
+for(const h of this.hazards){if(h.lane===this.lane&&Math.abs(h.y-this.player.y)<230)h.hit=true;}
+}else{this.feedback('听鼓点！踩准再点击冲刺。',false);}
 }
-drawDragGuide(){
-const g=this.track(this.add.graphics());g.lineStyle(4,0xffdf61,.9);
-for(let y=326;y<370;y+=15){g.beginPath();g.moveTo(210,y);g.lineTo(210,y+7);g.strokePath();}
-g.fillStyle(0xffdf61,1);g.fillTriangle(201,366,219,366,210,380);
-this.dragStartDot=this.track(this.add.circle(210,310,8,0xffdf61,1));
-this.dragGuideLabel=this.txt(247,343,'拖到这里 ↓',12,'#ffdf61',0,'bold');
+beginMini(index){
+this.clearPhase();this.phase='mini';this.miniIndex=index;this.miniType=index%EVENTS.length;this.miniInfo=EVENTS[this.miniType];this.miniElapsed=0;this.miniDuration=this.quick?3200:this.miniInfo.seconds*1000;this.miniHits=0;this.miniGoal=this.quick?1:this.miniInfo.goal;this.miniEnding=false;this.gesture=null;this.holding=false;this.draggingHelmet=false;this.padDown={left:null,right:null};this.padHeld={left:false,right:false};this.lastShakeTap=0;
+const color=COLORS[this.miniType];const bg=this.track(this.add.graphics());bg.fillStyle(0x11152f,.94);bg.fillRoundedRect(18,190,384,520,26);bg.lineStyle(2,color,.75);bg.strokeRoundedRect(18,190,384,520,26);
+this.text(25,31,'荒诞事件 '+(index+1)+' / '+EVENTS.length,12,'#c5cbea',0);
+this.text(210,70,this.miniInfo.name,27,'#ffdf61');this.text(210,112,this.miniInfo.desc,14,'#e3e7ff',.5,'normal');this.text(30,151,this.miniInfo.type,12,'#69e3c0',0);this.miniTimer=this.text(390,151,(this.miniDuration/1000).toFixed(1)+'s',12,'#c4c9e8',1);
+this.track(this.add.rectangle(210,174,350,5,0x363d61,.9));this.miniProgress=this.track(this.add.rectangle(35,174,0,5,color,1).setOrigin(0,.5));this.miniHitText=this.text(210,208,'完成 '+this.miniHits+' / '+this.miniGoal,12,'#aeb8dd');
+this.text(210,742,'成功继续跑酷 · 失败会消耗一次生命',12,'#9ca8d1',.5,'normal');
+if(this.miniType===0)this.miniFly();
+if(this.miniType===1)this.miniPhoto();
+if(this.miniType===2)this.miniBoss();
+if(this.miniType===3)this.miniHelmet();
+if(this.miniType===4)this.miniSneeze();
+if(this.miniType===5)this.miniPizza();
+if(this.miniType===6)this.miniDouble();
+if(this.miniType===7)this.miniShake();
+if(this.miniType===8)this.miniShout();
 }
-resetHelmet(){
-if(this.helmet&&this.helmet.active)this.helmet.destroy();
-this.helmet=this.image('helmet',this.helmetHome.x,this.helmetHome.y,104,86,-5);
-this.helmet.setInteractive({draggable:true,useHandCursor:true});this.input.setDraggable(this.helmet);this.dragItem=this.helmet;
-this.helmet.on('dragstart',()=>{if(this.pigeonTarget){this.pigeonTarget.setFillStyle(0x63f5c8,.2);this.pigeonTarget.setStrokeStyle(4,0xffdf61,1);}if(this.dragGuideLabel)this.dragGuideLabel.setText('松手放入圆圈');});
-this.helmet.on('drag',()=>{if(this.pigeonTarget){const d=Phaser.Math.Distance.Between(this.helmet.x,this.helmet.y,190,390);this.pigeonTarget.setStrokeStyle(4,d<65?0x63f5c8:0xffdf61,1);}});
+miniFly(){
+this.image('vampire',210,430,160,180,4);this.text(210,560,'它正围着吸血鬼的鼻子转！',14,'#b9c3e7',.5,'normal');this.flyTarget=this.image('fly',210,380,56,56,0);this.flyTarget.setDepth(20);
 }
-stageSneeze(){
-this.image('oldman',210,397,185,200,0);this.txt(210,545,'啊……啊……阿嚏！',20,'#ff91b5');
-this.txt(210,606,'憋住进度条，在绿色区间松手',13,'#c1c9e9',.5,'normal');
-this.track(this.add.rectangle(210,657,282,28,0x2c3152).setStrokeStyle(2,0xffffff,.2));this.track(this.add.rectangle(210,657,54,26,0x48d6a4,.95));this.holdMarker=this.track(this.add.rectangle(70,657,5,36,0xffffff,1));
-this.button(210,725,252,70,'按住憋气！',()=>{},0xa74677);
-this.txt(210,785,'松手时机越准，连击越高',12,'#8e9bc6',.5,'normal');
+miniPhoto(){
+this.text(210,555,'落地那一刻，跟着鼓点按下！',14,'#c1c9e8',.5,'normal');this.miniHero=this.image('heroFly',210,365,160,170,-8);this.photoRing=this.track(this.add.circle(210,445,75,0xffffff,.01).setStrokeStyle(4,0xffdf61,.85));this.tweens.add({targets:this.photoRing,scale:.75,duration:480,yoyo:true,repeat:-1,ease:'Sine.InOut'});
 }
-stagePizza(){
-this.image('hero',210,397,136,150,-3);this.pizza=this.image('pizza',210,475,130,130,12);
-this.swipeDir=Math.random()<.5?-1:1;this.updateSwipePrompt();
-this.txt(210,616,'手指划得越快，披萨飞得越远。',13,'#b7c1e2',.5,'normal');
+miniBoss(){
+this.image('oldman',210,408,145,165,0);this.miniBoss=this.image('vampire',210,410,160,175,0);this.miniBoss.setVisible(false);this.miniAlert=this.text(210,590,'☕ 老板还没来，别动！',16,'#9fb1d8',.5,'normal');this.miniBossAlert=false;
+this.text(210,642,'红色警报亮起时点击画面',13,'#b8c2e5',.5,'normal');
 }
-updateSwipePrompt(){if(this.swipePrompt&&this.swipePrompt.active)this.swipePrompt.destroy();this.swipePrompt=this.txt(210,564,this.swipeDir<0?'← 向左拍飞！':'向右拍飞！ →',23,'#ffdf61');}
-stagePads(){
-this.image('heroFly',210,392,192,204,-3);
-this.addGlow(105,616,65,0x3ccfff,.13);this.addGlow(315,616,65,0xb78cff,.13);
-this.leftPad=this.track(this.add.circle(105,616,54,0x2a9dbd,.95).setStrokeStyle(4,0x8cecff,.8));this.rightPad=this.track(this.add.circle(315,616,54,0x8254bb,.95).setStrokeStyle(4,0xe0c5ff,.8));
-this.txt(105,616,'左喷射器',14,'#fff');this.txt(315,616,'右喷射器',14,'#fff');this.txt(210,715,'同时按住左右两侧',16,'#c2c9e9');this.txt(210,753,'桌面可同时按 A + L',12,'#8e9bc6',.5,'normal');
+miniHelmet(){
+this.image('pigeon',210,438,178,178,-2);this.pigeonTarget=this.track(this.add.circle(190,390,43,0x63f5c8,.08).setStrokeStyle(3,0x63f5c8,1));this.tweens.add({targets:this.pigeonTarget,scale:1.13,alpha:.3,duration:450,yoyo:true,repeat:-1});
+const g=this.track(this.add.graphics());g.lineStyle(4,0xffdf61,.95);for(let y=300;y<366;y+=15){g.beginPath();g.moveTo(210,y);g.lineTo(210,y+8);g.strokePath();}g.fillStyle(0xffdf61,1);g.fillTriangle(201,360,219,360,210,375);
+this.text(250,330,'沿虚线拖动 ↓',12,'#ffdf61',0);this.helmet=this.image('helmet',210,290,102,84,-5);this.helmet.setDepth(15);
 }
-stageShake(){
-this.vampireSprite=this.image('vampire',210,417,178,194,4);this.txt(210,556,'Z  z  z  …',26,'#c3b1ff');this.txt(210,600,'吸血鬼的闹钟坏了。',14,'#b8c2e5',.5,'normal');
-this.button(210,675,252,58,'启用摇晃传感器',()=>this.enableMotion(),0x5b4b9b);
-this.button(210,746,252,52,'桌面模拟摇动',()=>this.shakeHit(),0x247e8a);
+miniSneeze(){
+this.image('oldman',210,405,178,192,0);this.text(210,558,'啊……啊……阿嚏！',20,'#ff91b5');this.text(210,605,'按住 0.5–1 秒再松开',13,'#c1c9e9',.5,'normal');
+this.track(this.add.rectangle(210,665,280,26,0x2c3152).setStrokeStyle(2,0xffffff,.2));this.track(this.add.rectangle(210,665,75,22,0x48d6a4,.9));this.holdMarker=this.track(this.add.rectangle(75,665,5,34,0xffffff,1));this.holdMs=0;
+this.text(210,720,'按住下方区域憋住喷嚏',12,'#8e9bc6',.5,'normal');
 }
-stageShout(){
-this.image('shout',210,398,190,200,-3);this.addGlow(210,408,125,0xffd84d,.11);
-this.txt(210,554,'啊啊啊啊啊——！',23,'#ffdf61');
-this.button(210,645,252,58,'开启麦克风',()=>this.enableMic(),0x5b4b9b);
-this.button(210,716,252,54,'桌面模拟尖叫',()=>this.shoutHit(),0x247e8a);
-this.txt(210,785,'麦克风只在授权后启用',12,'#8e9bc6',.5,'normal');
+miniPizza(){
+this.pizza=this.image('pizza',210,425,138,138,12);this.swipeDir=Math.random()<.5?-1:1;this.updatePizzaPrompt();this.text(210,615,'划得快、方向对，披萨就会飞出去。',13,'#b7c1e2',.5,'normal');
 }
-onDown(p){
-if(this.stage===2){this.bossTap();return;}
-if(this.stage===4&&p.y>680&&p.y<790){this.holding=true;this.holdMs=0;return;}
-if(this.stage===5){this.swipeStart={x:p.x,y:p.y,t:this.time.now};return;}
-if(this.stage===6){if(p.x<205)this.pad.left=this.time.now;else if(p.x>215)this.pad.right=this.time.now;this.checkPads();return;}
+updatePizzaPrompt(){if(this.swipePrompt&&this.swipePrompt.active)this.swipePrompt.destroy();this.swipePrompt=this.text(210,560,this.swipeDir<0?'← 向左拍飞！':'向右拍飞！ →',24,'#ffdf61');}
+miniDouble(){
+this.image('heroFly',210,395,174,184,-4);this.padLeft=this.track(this.add.circle(105,615,54,0x2a9dbd,.95).setStrokeStyle(4,0x8cecff,.85));this.padRight=this.track(this.add.circle(315,615,54,0x8254bb,.95).setStrokeStyle(4,0xe0c5ff,.85));this.text(105,615,'左喷射器',13,'#fff');this.text(315,615,'右喷射器',13,'#fff');this.text(210,705,'同时按住左右两侧',16,'#c2c9e9');this.text(210,746,'桌面可同时按 A + L',12,'#8e9bc6',.5,'normal');
 }
-onUp(p){
-if(this.stage===4&&this.holding){this.holding=false;const v=(this.holdMs%1500)/1500;this.actionResult(v>=.44&&v<=.64,v>=.44&&v<=.64?'喷嚏憋回去了！全场鼓掌。':'喷嚏爆发！老奶奶震碎了节拍。');return;}
-if(this.stage===5&&this.swipeStart){const dx=p.x-this.swipeStart.x,dy=p.y-this.swipeStart.y,dt=this.time.now-this.swipeStart.t;const dir=dx<0?-1:1,good=Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*1.15&&dt<550&&dir===this.swipeDir;this.swipeStart=null;if(good){this.actionSuccess('披萨回旋！外卖员开始怀疑人生。');this.swipeDir*=-1;this.updateSwipePrompt();if(this.pizza&&this.pizza.active){this.tweens.add({targets:this.pizza,x:this.swipeDir<0?310:110,angle:this.pizza.angle+180,duration:180,yoyo:true,onComplete:()=>{if(this.pizza&&this.pizza.active)this.pizza.setPosition(210,475);}});}}else this.actionMiss('方向不对，或者不够快！');}
+miniShake(){
+this.image('vampire',210,415,178,190,4);this.text(210,556,'Z  z  z  …',26,'#c3b1ff');this.text(210,600,'摇动手机，或连续点两次',14,'#b8c2e5',.5,'normal');
+this.button(210,680,245,58,'摇醒吸血鬼！',()=>this.shakeTap(),0x247e8a);
 }
-bossTap(){if(this.bossAlert){this.actionSuccess('装忙成功！你刚刚合上了 47 个表格。');this.bossAlert=false;this.bossNextAt=this.elapsed+500;}else this.actionMiss('你在老板没来时就开始演了。');}
-checkPads(){if(this.pad.left!==null&&this.pad.right!==null&&Math.abs(this.pad.left-this.pad.right)<260){this.actionSuccess('双喷射器同时点火！超人进入低轨道。');this.pad={left:null,right:null};if(this.leftPad)this.leftPad.setFillStyle(0x2a9dbd);if(this.rightPad)this.rightPad.setFillStyle(0x8254bb);}else if(this.pad.left!==null&&this.pad.right!==null){this.actionMiss('要同时按下！再来一次。');this.pad={left:null,right:null};}}
+miniShout(){
+this.image('shout',210,400,180,192,-4);this.text(210,555,'啊啊啊啊啊——！',22,'#ffdf61');this.button(210,670,250,66,'长按模拟尖叫',()=>{},0x7655e8);this.text(210,747,'按住 0.5 秒，帮超人冲破音障',12,'#8e9bc6',.5,'normal');
+}
+updateMini(delta){
+this.miniElapsed+=delta;const left=Math.max(0,this.miniDuration-this.miniElapsed);if(this.miniTimer)this.miniTimer.setText((left/1000).toFixed(1)+'s');if(this.miniProgress)this.miniProgress.width=350*(1-left/this.miniDuration);if(this.miniHitText)this.miniHitText.setText('完成 '+this.miniHits+' / '+this.miniGoal);
+if(this.miniType===0&&this.flyTarget&&this.flyTarget.active){this.flyTarget.x=210+Math.sin(this.miniElapsed/220)*105;this.flyTarget.y=395+Math.cos(this.miniElapsed/290)*65;this.flyTarget.angle=Math.sin(this.miniElapsed/170)*28;}
+if(this.miniType===1&&this.miniHero&&this.miniHero.active){this.miniHero.y=310+Math.abs(Math.sin(this.miniElapsed/360))*150;this.miniHero.angle=-10+Math.sin(this.miniElapsed/170)*14;if(this.photoRing)this.photoRing.y=this.miniHero.y+70;}
+if(this.miniType===2){const alert=(this.miniElapsed%1450)<600;if(alert!==this.miniBossAlert){this.miniBossAlert=alert;if(this.miniBoss)this.miniBoss.setVisible(alert);if(this.miniAlert){this.miniAlert.setText(alert?'🚨 老板出现！快装忙！':'☕ 老板走了，继续摸鱼');this.miniAlert.setColor(alert?'#ff668c':'#9fb1d8');}}}
+if(this.miniType===4&&this.holding&&this.holdMarker){const v=Math.min(1,(this.time.now-this.holdStart)/1100);this.holdMarker.x=70+280*v;}
+if(this.miniType===5&&this.pizza&&this.pizza.active){this.pizza.y=425+Math.sin(this.miniElapsed/170)*10;this.pizza.angle+=delta*.018;}
+if(this.miniType===6&&this.keys.A.isDown&&this.keys.L.isDown){if(!this.dualKeyboardLatched){this.dualKeyboardLatched=true;this.actionSuccess('双喷射器同时点火！');}}else this.dualKeyboardLatched=false;
+if(this.miniType===8&&this.holding&&this.time.now-this.holdStart>500){this.actionSuccess('尖叫成功！超人突破音障。');this.holding=false;}
+if(left<=0&&!this.miniEnding)this.finishMini(this.miniHits>=this.miniGoal);
+}
+handleDown(p){
+if(this.phase==='run'){this.gesture={x:p.x,y:p.y,t:this.time.now,id:p.id};return;}
+if(this.phase!=='mini'||this.miniEnding)return;
+switch(this.miniType){
+case 0:if(this.flyTarget&&Phaser.Math.Distance.Between(p.x,p.y,this.flyTarget.x,this.flyTarget.y)<52)this.actionSuccess('啪！苍蝇被拍进了爵士乐队。');else if(p.y>245&&p.y<700)this.actionMiss('没点中苍蝇！追着它点。');break;
+case 1:this.tryMiniPhoto();break;
+case 2:if(this.miniBossAlert)this.actionSuccess('装忙成功！你刚刚合上了 47 个表格。');else this.actionMiss('老板还没来，别急着表演。');break;
+case 3:if(this.helmet&&Phaser.Math.Distance.Between(p.x,p.y,this.helmet.x,this.helmet.y)<76){this.draggingHelmet=true;this.dragPointerId=p.id;this.helmet.setScale(1.08);if(this.pigeonTarget)this.pigeonTarget.setStrokeStyle(4,0xffdf61,1);}break;
+case 4:if(p.y>620){this.holding=true;this.holdStart=this.time.now;this.holdMs=0;}break;
+case 5:this.gesture={x:p.x,y:p.y,t:this.time.now,id:p.id};break;
+case 6:{const side=p.x<210?'left':'right';this.padDown[side]=this.time.now;this.padHeld[side]=true;if(side==='left'&&this.padLeft)this.padLeft.setScale(.9);if(side==='right'&&this.padRight)this.padRight.setScale(.9);this.checkDual();break;}
+case 7:if(p.y>625)this.shakeTap();break;
+case 8:if(p.y>600){this.holding=true;this.holdStart=this.time.now;}break;
+}
+}
+handleMove(p){
+if(this.phase==='mini'&&this.miniType===3&&this.draggingHelmet&&p.id===this.dragPointerId&&this.helmet){this.helmet.x=p.x;this.helmet.y=p.y;const d=Phaser.Math.Distance.Between(p.x,p.y,190,390);if(this.pigeonTarget)this.pigeonTarget.setStrokeStyle(4,d<62?0x63f5c8:0xffdf61,1);}
+}
+handleUp(p){
+if(this.phase==='run'&&this.gesture&&this.gesture.id===p.id){const g=this.gesture;this.gesture=null;const dx=p.x-g.x,dy=p.y-g.y,dt=this.time.now-g.t;if(Math.abs(dx)>38&&Math.abs(dx)>Math.abs(dy)*1.15){this.changeLane(dx<0?-1:1);}else if(dt<300)this.tryBeatDash();return;}
+if(this.phase!=='mini'||this.miniEnding)return;
+if(this.miniType===3&&this.draggingHelmet&&p.id===this.dragPointerId){this.draggingHelmet=false;if(this.helmet){this.helmet.setScale(1);const d=Phaser.Math.Distance.Between(this.helmet.x,this.helmet.y,190,390);if(d<62){this.actionSuccess('安全帽到位！鸽子现在是工地监理。');}else{this.actionMiss('没放进绿色圆圈！沿虚线拖到鸽子头顶。');this.tweens.add({targets:this.helmet,x:210,y:290,angle:-5,duration:200,ease:'Back.Out'});if(this.pigeonTarget)this.pigeonTarget.setStrokeStyle(4,0xff668c,1);}}return;}
+if(this.miniType===4&&this.holding){this.holding=false;const ms=this.time.now-this.holdStart;this.actionResult(ms>=500&&ms<=1100,ms>=500&&ms<=1100?'喷嚏憋回去了！全场鼓掌。':'太早或太晚！喷嚏震飞了假发。');return;}
+if(this.miniType===5&&this.gesture&&this.gesture.id===p.id){const g=this.gesture;this.gesture=null;const dx=p.x-g.x,dy=p.y-g.y,dt=this.time.now-g.t,dir=dx<0?-1:1,good=Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.1&&dt<600&&dir===this.swipeDir;if(good){this.actionSuccess('披萨回旋！外卖员开始怀疑人生。');this.swipeDir*=-1;this.updatePizzaPrompt();if(this.pizza)this.tweens.add({targets:this.pizza,x:this.swipeDir<0?305:115,angle:this.pizza.angle+180,duration:180,yoyo:true,onComplete:()=>{if(this.pizza&&this.pizza.active)this.pizza.setPosition(210,425);}});}else this.actionMiss('方向不对或不够快！看箭头再划。');return;}
+if(this.miniType===6){const side=p.x<210?'left':'right';this.padHeld[side]=false;if(side==='left'&&this.padLeft)this.padLeft.setScale(1);if(side==='right'&&this.padRight)this.padRight.setScale(1);}
+if(this.miniType===8&&this.holding){this.holding=false;const ms=this.time.now-this.holdStart;if(ms>=500)this.actionSuccess('尖叫成功！超人突破音障。');else this.actionMiss('再长一点！让超人听见你的尖叫。');}
+}
+checkDual(){if(this.padHeld.left&&this.padHeld.right&&Math.abs(this.padDown.left-this.padDown.right)<260){this.actionSuccess('双喷射器同时点火！');this.padHeld={left:false,right:false};this.padDown={left:null,right:null};if(this.padLeft)this.padLeft.setScale(1);if(this.padRight)this.padRight.setScale(1);}}
+tryMiniPhoto(){const period=60000/this.currentBpm();let d=Math.abs(this.time.now-this.lastBeatMs);d=Math.min(d,Math.abs(period-d));if(d<170)this.actionSuccess(d<85?'完美踩拍！这张照片价值百万。':'踩准了！超人落地成功。');else this.actionMiss('慢半拍！跟着鼓点按。');if(this.photoRing){this.photoRing.setStrokeStyle(5,d<170?0x63f5c8:0xff668c,1);this.time.delayedCall(150,()=>{if(this.photoRing&&this.photoRing.active)this.photoRing.setStrokeStyle(4,0xffdf61,.85);});}}
+shakeTap(){if(this.phase!=='mini'||this.miniType!==7||this.time.now-this.lastShakeTap<250)return;this.lastShakeTap=this.time.now;this.actionSuccess('醒醒！吸血鬼要求赔偿他的美梦。');if(this.phase==='mini'&&this.miniHits<this.miniGoal&&this.miniBoss)this.tweens.add({targets:this.miniBoss,angle:Phaser.Math.Between(-16,16),duration:100,yoyo:true});}
 actionSuccess(msg){
-this.hitCount++;this.combo++;this.best=Math.max(this.best,this.combo);this.score+=100+Math.min(100,this.combo*8);if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal+(this.hitCount>=this.goal?'  ✓':''));
-this.feedback(msg,true);this.capsuleBurst(210,440,COLORS[Math.max(0,Math.min(8,this.stage))]);
+if(this.phase==='mini'){if(this.miniEnding)return;this.miniHits++;this.score+=100;this.combo++;this.bestCombo=Math.max(this.bestCombo,this.combo);this.feedback(msg,true);this.capsuleBurst(210,445,COLORS[this.miniType]);if(this.miniHits>=this.miniGoal){this.miniEnding=true;this.time.delayedCall(430,()=>this.finishMini(true));}}
+else if(this.phase==='run'){this.score+=50;this.feedback(msg,true);}
 }
 actionResult(ok,msg){if(ok)this.actionSuccess(msg);else this.actionMiss(msg);}
-actionMiss(msg){this.combo=0;if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal);if(this.time.now-this.lastWrong>450){this.feedback(msg,false);this.lastWrong=this.time.now;const shake=this.add.rectangle(210,440,330,250,0xff668c,.001).setStrokeStyle(3,0xff668c,.7);this.track(shake);this.tweens.add({targets:shake,alpha:.14,duration:70,yoyo:true,repeat:1,onComplete:()=>shake.destroy()});}}
+actionMiss(msg){if(this.time.now-this.lastWrong<380)return;this.lastWrong=this.time.now;this.combo=0;this.feedback(msg,false);const ring=this.add.circle(210,445,105,0xffffff,.001).setStrokeStyle(3,0xff668c,.9).setDepth(70);this.tweens.add({targets:ring,scale:1.3,alpha:0,duration:220,onComplete:()=>ring.destroy()});}
 feedback(msg,good){
 if(this.feedbackContainer&&this.feedbackContainer.active)this.feedbackContainer.destroy();
-const c=this.add.container(210,770);c.setDepth(1000);
-const bg=this.add.graphics();bg.fillStyle(good?0x123c3b:0x4a1e37,.98);bg.fillRoundedRect(-174,-25,348,50,16);bg.lineStyle(2,good?0x63f5c8:0xff668c,.95);bg.strokeRoundedRect(-174,-25,348,50,16);
-const icon=this.add.text(-151,0,good?'✓':'!',{fontSize:'22px',fontStyle:'bold',color:good?'#63f5c8':'#ff668c'}).setOrigin(.5);
-const text=this.add.text(8,0,msg,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:'14px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:285}}).setOrigin(.5);
-c.add([bg,icon,text]);this.feedbackContainer=c;this.objects.push(c);
-c.setAlpha(0);c.y=792;this.tweens.add({targets:c,y:770,alpha:1,duration:150,ease:'Back.Out'});
-if(good){const flash=this.add.rectangle(210,430,W,H,0x63f5c8,.12).setDepth(900);this.tweens.add({targets:flash,alpha:0,duration:180,onComplete:()=>flash.destroy()});}
-this.time.delayedCall(1000,()=>{if(c&&c.active){this.tweens.add({targets:c,y:792,alpha:0,duration:150,onComplete:()=>c.destroy()});}});
+const c=this.add.container(210,780).setDepth(1000),bg=this.add.graphics();bg.fillStyle(good?0x123c3b:0x4a1e37,.97);bg.fillRoundedRect(-174,-24,348,48,15);bg.lineStyle(2,good?0x63f5c8:0xff668c,.95);bg.strokeRoundedRect(-174,-24,348,48,15);
+const icon=this.add.text(-150,0,good?'✓':'!',{fontSize:'22px',fontStyle:'bold',color:good?'#63f5c8':'#ff668c'}).setOrigin(.5);const t=this.add.text(8,0,msg,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:'14px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:280}}).setOrigin(.5);c.add([bg,icon,t]);this.feedbackContainer=c;this.phaseObjects.push(c);c.setAlpha(0);c.y=800;this.tweens.add({targets:c,y:780,alpha:1,duration:130,ease:'Back.Out'});if(good){const flash=this.add.rectangle(210,430,W,H,0x63f5c8,.10).setDepth(900);this.tweens.add({targets:flash,alpha:0,duration:180,onComplete:()=>flash.destroy()});}this.time.delayedCall(900,()=>{if(c&&c.active)this.tweens.add({targets:c,y:800,alpha:0,duration:130,onComplete:()=>c.destroy()});});
 }
-capsuleBurst(x,y,color){
-const ring=this.track(this.add.circle(x,y,15,0xffffff,.001).setStrokeStyle(4,color,.9));this.tweens.add({targets:ring,scale:3.2,alpha:0,duration:320,onComplete:()=>ring.destroy()});
-for(let i=0;i<8;i++){const a=i*Math.PI/4,d=Phaser.Math.Between(24,54),dot=this.track(this.add.circle(x,y,Phaser.Math.Between(3,6),color,1));this.tweens.add({targets:dot,x:x+Math.cos(a)*d,y:y+Math.sin(a)*d,alpha:0,scale:.2,duration:300,onComplete:()=>dot.destroy()});}
+capsuleBurst(x,y,color){const ring=this.track(this.add.circle(x,y,15,0xffffff,.001).setStrokeStyle(4,color,.9).setDepth(60));this.tweens.add({targets:ring,scale:3.1,alpha:0,duration:300,onComplete:()=>ring.destroy()});for(let i=0;i<8;i++){const a=i*Math.PI/4,d=Phaser.Math.Between(24,54),dot=this.track(this.add.circle(x,y,Phaser.Math.Between(3,6),color,1).setDepth(61));this.tweens.add({targets:dot,x:x+Math.cos(a)*d,y:y+Math.sin(a)*d,alpha:0,scale:.2,duration:290,onComplete:()=>dot.destroy()});}}
+finishMini(success){
+if(this.phase!=='mini'||this.finishedMini)return;this.finishedMini=true;this.miniEnding=true;
+if(!success){this.lives--;this.combo=0;this.feedback('事件失败！生命 -1，继续逃！',false);}else{this.score+=200;this.feedback('事件完成！继续向终点冲刺！',true);}
+this.minisCompleted++;
+this.time.delayedCall(650,()=>{if(this.lives<=0){this.showResults(false);return;}if(this.minisCompleted>=EVENTS.length)this.finishAt=this.distance+1450;else this.nextMiniAt=this.distance+(this.quick?850:1900);this.startRunSegment(false);});
 }
-onMotion(e){
-if(this.stage!==7)return;const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const v=[a.x||0,a.y||0,a.z||0];if(this.motionPrev){const d=Math.abs(v[0]-this.motionPrev[0])+Math.abs(v[1]-this.motionPrev[1])+Math.abs(v[2]-this.motionPrev[2]);if(d>19&&this.time.now-this.lastShakeAt>650){this.lastShakeAt=this.time.now;this.shakeHit();}}this.motionPrev=v;
+onMotion(e){if(this.phase!=='mini'||this.miniType!==7)return;const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const v=[a.x||0,a.y||0,a.z||0];if(this.motionPrev){const d=Math.abs(v[0]-this.motionPrev[0])+Math.abs(v[1]-this.motionPrev[1])+Math.abs(v[2]-this.motionPrev[2]);if(d>20&&this.time.now-this.lastMotionAt>450){this.lastMotionAt=this.time.now;this.shakeTap();}}this.motionPrev=v;}
+showResults(won){
+this.clearPhase();this.phase='result';this.stopAudioIfNeeded();const color=won?0x63f5c8:0xff668c;const glow=this.track(this.add.circle(210,300,170,color,.10));this.tweens.add({targets:glow,scale:1.12,alpha:.05,duration:650,yoyo:true,repeat:-1});
+if(won){this.image('hero',210,280,174,184,-5);this.text(210,90,'成功抵达终点！',32,'#ffdf61');this.text(210,442,'荒诞跑酷冠军',22,'#63f5c8');}else{this.image('vampire',210,300,175,190,8);this.text(210,90,'跑酷结束！',34,'#ff809f');this.text(210,442,'重力赢了这一局。',20,'#e1c4d5');}
+this.text(210,500,'最终分数  '+this.score,25,'#fff');this.text(210,542,'到达距离  '+Math.floor(this.distance/10)+'m',16,'#c5cbea');this.text(210,579,'最佳连击  '+this.bestCombo,15,'#ffdf61');
+this.button(210,655,270,60,'再来一次',()=>{this.quick=false;this.startAudio();this.startRun();},0x7655e8);this.button(210,728,270,54,'返回标题',()=>this.showTitle(),0x247e8a);
 }
-enableMotion(){try{const D=window.DeviceMotionEvent;if(D&&typeof D.requestPermission==='function')D.requestPermission().then(s=>{if(s==='granted')this.feedback('传感器已启用，摇一摇！',true);else this.feedback('没有获得权限，可用模拟按钮。',false);}).catch(()=>this.feedback('传感器不可用，可用模拟按钮。',false));else this.feedback('现在摇动手机试试！',true);}catch(e){this.feedback('传感器不可用，可用模拟按钮。',false);}}
-shakeHit(){if(this.stage===7){this.actionSuccess('醒了！吸血鬼要求赔偿他的美梦。');if(this.vampireSprite)this.vampireSprite.setAngle(Phaser.Math.Between(-18,18));}}
-async enableMic(){
-try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('unsupported');const stream=await navigator.mediaDevices.getUserMedia({audio:true});if(this.stage!==8){stream.getTracks().forEach(t=>t.stop());return;}const C=window.AudioContext||window.webkitAudioContext,ctx=new C(),source=ctx.createMediaStreamSource(stream),analyser=ctx.createAnalyser();analyser.fftSize=256;source.connect(analyser);this.mic={stream,ctx,analyser};this.micData=new Uint8Array(analyser.fftSize);this.feedback('麦克风已开启，大喊一声！',true);}catch(e){this.feedback('麦克风不可用，可点模拟尖叫。',false);}
-}
-shoutHit(){if(this.stage===8&&this.time.now-this.lastShoutAt>550){this.lastShoutAt=this.time.now;this.actionSuccess('音量爆表！超人突破了大气层。');}}
+stopAudioIfNeeded(){if(this.audio&&this.audio.state==='running'){/* keep the context warm for instant replay */}}
 update(_,delta){
-if(this.stage>=0&&this.stage<LEVELS.length&&!this.stageFinished){
-this.elapsed+=delta;const left=Math.max(0,this.duration-this.elapsed);if(this.timeText)this.timeText.setText((left/1000).toFixed(1)+'s');if(this.progress)this.progress.width=350*(1-left/this.duration);
-if(this.beatDots){const idx=(this.beatNo||0)%4;this.beatDots.forEach((d,j)=>{d.setFillStyle(j===idx?COLORS[this.stage]:0x5b6284,j===idx?1:.45);if(j===idx)d.setScale(1.25);else d.setScale(1);});}
-if(this.stage===2){const phase=this.elapsed%2200,alert=phase<820;if(alert!==this.bossAlert){this.bossAlert=alert;if(this.bossSprite)this.bossSprite.setVisible(alert);if(this.alertText)this.alertText.setText(alert?'🚨 老板出现！快装忙！':'☕ 老板走了，继续摸鱼');if(this.alertText)this.alertText.setColor(alert?'#ff668c':'#9fb1d8');}}
-if(this.holding){this.holdMs+=delta;const v=(this.holdMs%1500)/1500;if(this.holdMarker)this.holdMarker.x=70+280*v;}
-if(this.stage===6&&this.keys.A.isDown&&this.keys.L.isDown&&!this.keyboardDoubleLatched){this.keyboardDoubleLatched=true;this.actionSuccess('双喷射器同时点火！');this.pad={left:null,right:null};}if(!this.keys.A.isDown||!this.keys.L.isDown)this.keyboardDoubleLatched=false;
-if(this.stage===8&&this.mic&&this.time.now-this.lastShoutAt>600){this.mic.analyser.getByteTimeDomainData(this.micData);let sum=0;for(let i=0;i<this.micData.length;i++){const n=(this.micData[i]-128)/128;sum+=n*n;}if(Math.sqrt(sum/this.micData.length)>.2)this.shoutHit();}
-if(left<=0){this.stageFinished=true;this.feedback(this.hitCount>=this.goal?'漂亮！目标完成，下一关更疯。':'时间到！下一关换种操作。',this.hitCount>=this.goal);this.time.delayedCall(650,()=>this.startStage(this.stage+1));}
+if(this.phase==='run')this.updateRun(delta);
+else if(this.phase==='mini'&&!this.miniEnding)this.updateMini(delta);
+if(this.audio&&(this.phase==='run'||this.phase==='mini')){
+const bpm=this.currentBpm(),step=30/bpm;
+while(this.audio.currentTime>=this.nextStep){const t=this.nextStep;if(this.stepIndex%2===0){this.onBeat();const beat=Math.floor(this.stepIndex/2)%4;if(beat===0||beat===2)this.kick(t,beat===0);else this.snare(t);}this.noise(t,.035,.03,'highpass',7000);this.stepIndex++;this.nextStep+=step;}
 }
-if(this.audio&&this.stage>=0&&this.stage<LEVELS.length){const bpm=LEVELS[this.stage].bpm,step=30/bpm;while(this.audio.currentTime>=this.nextStep){const t=this.nextStep;if(this.stepIndex%2===0){this.onBeat();const beat=Math.floor(this.stepIndex/2)%4;if(beat===0||beat===2)this.playKick(t,beat===0);else this.playSnare(t);}this.playHat(t);this.stepIndex++;this.nextStep+=step;}}
-}
-showResults(){
-this.clearObjects();this.stage=9;this.drawStageDecor(8);this.txt(210,100,'你活着闯过了！',33,'#ffdf61');this.image('hero',210,280,180,188,-5);this.txt(210,433,'总分  '+this.score,28,'#ffffff');this.txt(210,477,'最佳连击  '+this.best,19,'#63f5c8');this.txt(210,535,'九种操作，九次社死。',16,'#c2c9e9',.5,'normal');this.button(210,645,260,60,'再来一局',()=>{this.startAudio();this.startRun();},0x7655e8);this.button(210,719,260,54,'返回标题',()=>this.showTitle(),0x247e8a);
 }
 }
 const config={type:Phaser.CANVAS,parent:'game',width:W,height:H,backgroundColor:'#0b0d20',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true,pixelArt:false,transparent:false},scene:[Party]};
