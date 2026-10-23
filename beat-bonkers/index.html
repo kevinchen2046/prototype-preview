@@ -28,7 +28,7 @@ create(){
 this.drawBackdrop();this.input.addPointer(2);
 this.input.on('pointerdown',p=>this.onDown(p));this.input.on('pointerup',p=>this.onUp(p));
 this.input.on('drag',(p,obj,x,y)=>{if(obj===this.dragItem){obj.x=x;obj.y=y;}});
-this.input.on('dragend',(p,obj)=>{if(obj===this.dragItem){this.dragItem=null;const d=Phaser.Math.Distance.Between(obj.x,obj.y,210,385);if(d<82){this.actionSuccess('安全帽！鸽子现在是工地监理了。');this.resetHelmet();}else{this.actionMiss('差一点！把帽子放到鸽子头上。');this.resetHelmet();}}});
+this.input.on('dragend',(p,obj)=>{if(obj===this.dragItem){this.dragItem=null;const d=Phaser.Math.Distance.Between(obj.x,obj.y,190,390);if(d<65){this.actionSuccess('安全帽！鸽子现在是工地监理了。');if(this.pigeonTarget){this.pigeonTarget.setFillStyle(0x63f5c8,.5);this.tweens.add({targets:this.pigeonTarget,scale:1.35,alpha:0,duration:220});}this.resetHelmet();}else{this.actionMiss('没放进绿色圆圈！沿虚线拖到鸽子头顶。');this.tweens.add({targets:obj,x:this.helmetHome.x,y:this.helmetHome.y,angle:-5,duration:180,ease:'Back.Out'});if(this.pigeonTarget)this.pigeonTarget.setStrokeStyle(4,0xff668c,1);}}});
 this.keys=this.input.keyboard.addKeys({A:Phaser.Input.Keyboard.KeyCodes.A,L:Phaser.Input.Keyboard.KeyCodes.L,SPACE:Phaser.Input.Keyboard.KeyCodes.SPACE});
 this.motionHandler=e=>this.onMotion(e);window.addEventListener('devicemotion',this.motionHandler,{passive:true});
 this.loadSvgSprites().then(()=>this.showTitle()).catch(err=>{this.clearObjects();this.txt(210,350,'角色资产加载失败',25,'#ff9ba8');this.txt(210,405,String(err&&err.message||err).slice(0,100),13,'#ffffff',.5,'normal');});
@@ -47,7 +47,18 @@ track(o){this.objects.push(o);return o;}
 clearObjects(){this.objects.forEach(o=>{try{if(o&&o.destroy)o.destroy();}catch(e){}});this.objects=[];this.pulses=[];this.eqBars=[];this.barGraphics=null;this.hitText=null;this.timeText=null;this.progress=null;this.alertText=null;}
 txt(x,y,text,size=20,color='#fff',origin=.5,weight='bold'){return this.track(this.add.text(x,y,text,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:size+'px',fontStyle:weight,color,align:'center',wordWrap:{width:350},lineSpacing:5}).setOrigin(origin,.5));}
 button(x,y,w,h,label,fn,color=0x6b58d6){
-const c=this.add.container(x,y),g=this.add.graphics();g.fillStyle(color,1);g.fillRoundedRect(-w/2,-h/2,w,h,18);g.lineStyle(2,0xffffff,.25);g.strokeRoundedRect(-w/2,-h/2,w,h,18);const t=this.add.text(0,0,label,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:'17px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-22}}).setOrigin(.5);c.add([g,t]);c.setSize(w,h);c.setInteractive(new Phaser.Geom.Rectangle(-w/2,-h/2,w,h),Phaser.Geom.Rectangle.Contains);c.on('pointerdown',fn);return this.track(c);
+const c=this.add.container(x,y),g=this.add.graphics();
+const paint=(fill,stroke=0xffffff,alpha=.28)=>{g.clear();g.fillStyle(fill,1);g.fillRoundedRect(-w/2,-h/2,w,h,18);g.lineStyle(2,stroke,alpha);g.strokeRoundedRect(-w/2,-h/2,w,h,18);};paint(color);
+const shine=this.add.rectangle(0,-h/2+5,w-18,3,0xffffff,.18).setOrigin(.5,0);
+const t=this.add.text(0,0,label,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:'17px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-22}}).setOrigin(.5);
+c.add([g,shine,t]);c.setSize(w,h);c.setInteractive(new Phaser.Geom.Rectangle(-w/2,-h/2,w,h),Phaser.Geom.Rectangle.Contains);
+let down=false;
+c.on('pointerdown',()=>{down=true;this.tweens.killTweensOf(c);this.tweens.add({targets:c,scaleX:.96,scaleY:.93,duration:65,ease:'Quad.Out'});paint(Phaser.Display.Color.IntegerToColor(color).brighten(22).color,0xffffff,.8);});
+c.on('pointerup',()=>{if(!down)return;down=false;this.tweens.killTweensOf(c);this.tweens.add({targets:c,scaleX:1.035,scaleY:1.04,duration:80,yoyo:true,ease:'Back.Out',onComplete:()=>{c.setScale(1);paint(color);}});this.tweens.add({targets:shine,alpha:.5,duration:90,yoyo:true});try{fn();}catch(e){this.feedback('操作没有成功触发，请再试一次。',false);}});
+c.on('pointerupoutside',()=>{down=false;this.tweens.killTweensOf(c);this.tweens.add({targets:c,scaleX:1,scaleY:1,duration:100});paint(color);});
+c.on('pointerover',()=>{if(!down)paint(Phaser.Display.Color.IntegerToColor(color).brighten(10).color,0xffffff,.55);});
+c.on('pointerout',()=>{if(!down)paint(color);});
+return this.track(c);
 }
 image(key,x,y,w,h,angle=0){const o=this.track(this.add.image(x,y,key).setDisplaySize(w,h).setAngle(angle));this.pulses.push({o,baseAngle:angle});return o;}
 showTitle(){
@@ -78,7 +89,7 @@ this.lastBeatMs=this.time.now;this.beatNo=(this.beatNo||0)+1;
 const color=COLORS[Math.max(0,Math.min(8,this.stage))]||0xffdf61;
 const ring=this.add.circle(210,460,64,0xffffff,0.001).setStrokeStyle(this.beatNo%4===1?5:3,color,this.beatNo%4===1?.9:.55);this.track(ring);
 this.tweens.add({targets:ring,scaleX:2.05,scaleY:2.05,alpha:0,duration:360,ease:'Sine.Out',onComplete:()=>ring.destroy()});
-this.pulses.forEach((p,i)=>{if(!p.o||!p.o.active)return;const o=p.o;if(o===this.flyTarget)return;this.tweens.add({targets:o,y:o.y-13,angle:p.baseAngle+((this.beatNo%2)?4:-4),duration:95,ease:'Quad.Out',yoyo:true,hold:45});});
+this.pulses.forEach((p,i)=>{if(!p.o||!p.o.active)return;const o=p.o;if(o===this.flyTarget||o===this.fallingHero)return;this.tweens.add({targets:o,y:o.y-13,angle:p.baseAngle+((this.beatNo%2)?4:-4),duration:95,ease:'Quad.Out',yoyo:true,hold:45});});
 if(this.eqBars){this.eqBars.forEach((b,i)=>{if(b&&b.active){const h=8+((i*7+this.beatNo*11)%34);this.tweens.add({targets:b,scaleY:h/20,duration:100,yoyo:true,hold:80});}});}
 if(this.stage===0&&this.flyTarget&&this.beatNo%2===0)this.moveFly();if(this.stage===1&&this.photoInner&&this.photoInner.active){this.photoInner.setScale(1.25);this.tweens.add({targets:this.photoInner,scale:.62,duration:210,ease:'Quad.In'});}
 }
@@ -111,13 +122,21 @@ this.moveFly(true);
 }
 moveFly(initial){if(!this.flyTarget||!this.flyTarget.active)return;const x=initial?250:Phaser.Math.Between(65,350),y=initial?320:Phaser.Math.Between(315,495);this.tweens.add({targets:this.flyTarget,x,y,angle:Phaser.Math.Between(-35,35),duration:initial?1:210,ease:'Back.Out'});}
 stagePhoto(){
-this.image('hero',210,404,184,198,-3);this.addGlow(210,408,118,0xffd84d,.1);
-this.txt(210,548,'摆好姿势！等光圈合上。',15,'#c2c8e7',.5,'normal');
+this.addGlow(210,408,118,0xffd84d,.1);
+this.txt(210,548,'超人从天而降！落地时踩点拍照。',15,'#c2c8e7',.5,'normal');
+this.track(this.add.rectangle(210,514,340,4,0xffd34f,.45));
+this.fallShadow=this.track(this.add.ellipse(210,520,78,18,0x050817,.32));
+for(let i=0;i<9;i++){const x=45+i*41;const streak=this.track(this.add.rectangle(x,Phaser.Math.Between(250,440),2,Phaser.Math.Between(20,55),0xb9c6ff,.25));this.tweens.add({targets:streak,y:625,duration:Phaser.Math.Between(700,1200),repeat:-1,onRepeat:()=>{if(streak.active){streak.y=235;streak.x=Phaser.Math.Between(28,392);}}});}
+this.fallingHero=this.image('hero',210,300,184,198,-9);this.fallBaseX=this.fallingHero.scaleX;this.fallBaseY=this.fallingHero.scaleY;this.fallLoop();
 const outer=this.track(this.add.circle(210,430,65,0xffffff,.02).setStrokeStyle(4,0xffffff,.65));this.photoOuter=outer;
 const inner=this.track(this.add.circle(210,430,105,0xffffff,.01).setStrokeStyle(3,0xffd84d,.85));this.photoInner=inner;
-this.photoInner=inner;
 this.button(210,676,230,68,'📸  拍照！',()=>this.tryPhoto(),0x8d59d8);
 this.txt(210,744,'金色圈收进白色圈时得分最高',12,'#929fc9',.5,'normal');
+}
+fallLoop(){
+if(this.stage!==1||!this.fallingHero||!this.fallingHero.active)return;
+const h=this.fallingHero;h.setPosition(210,286).setAngle(-12).setScale(this.fallBaseX,this.fallBaseY);
+this.tweens.add({targets:h,y:410,angle:8,duration:650,ease:'Quad.In',onUpdate:()=>{if(this.fallShadow&&this.fallShadow.active){const k=Phaser.Math.Clamp((h.y-286)/124,0,1);this.fallShadow.setScale(.6+k*.8,.7+k*.3);this.fallShadow.setAlpha(.12+k*.28);}},onComplete:()=>{if(this.stage!==1||!h.active)return;this.capsuleBurst(210,505,0xffd34f);this.tweens.add({targets:h,scaleX:this.fallBaseX*1.12,scaleY:this.fallBaseY*.88,y:395,duration:90,yoyo:true,ease:'Quad.Out'});this.time.delayedCall(450,()=>this.fallLoop());}});
 }
 tryPhoto(){
 const bpm=LEVELS[this.stage].bpm,period=60000/bpm;let dt=Math.max(0,this.time.now-this.lastBeatMs);dt=Math.min(dt,Math.abs(period-dt));if(dt<170)this.actionSuccess(dt<85?'完美踩拍！超人闪瞎全场。':'踩准了！摄影师获得工伤补贴。');else this.actionMiss('慢半拍！听鼓点再按快门。');
@@ -130,11 +149,28 @@ this.alertText=this.txt(210,610,'☕ 老板还没来，喝口咖啡',16,'#9fb1d8
 this.txt(210,686,'只在红色警报亮起时点击屏幕！',13,'#b7c1e2',.5,'normal');
 }
 stagePigeon(){
-this.image('pigeon',210,438,188,188,-2);this.txt(210,564,'给鸽子戴安全帽',16,'#c0c8e9',.5,'normal');
-this.helmetHome={x:210,y:310};this.resetHelmet();
-this.txt(210,675,'拖到鸽子头上，别给它穿鞋。',12,'#8e9bc6',.5,'normal');
+this.image('pigeon',210,438,188,188,-2);
+this.pigeonTarget=this.track(this.add.circle(190,390,43,0x63f5c8,.07).setStrokeStyle(3,0x63f5c8,.95));
+this.tweens.add({targets:this.pigeonTarget,scale:1.16,alpha:.35,duration:480,yoyo:true,repeat:-1,ease:'Sine.InOut'});
+this.txt(210,263,'沿虚线向下拖动',16,'#ffdf61');
+this.txt(210,564,'把帽子中心拖进绿色圆圈',16,'#c0c8e9',.5,'normal');
+this.helmetHome={x:210,y:310};this.drawDragGuide();this.resetHelmet();
+this.txt(210,675,'拖动时会显示落点；松手后自动判断。',12,'#8e9bc6',.5,'normal');
 }
-resetHelmet(){if(this.helmet&&this.helmet.active)this.helmet.destroy();this.helmet=this.image('helmet',this.helmetHome.x,this.helmetHome.y,104,86,-5);this.helmet.setInteractive({draggable:true,useHandCursor:true});this.input.setDraggable(this.helmet);this.dragItem=this.helmet;}
+drawDragGuide(){
+const g=this.track(this.add.graphics());g.lineStyle(4,0xffdf61,.9);
+for(let y=326;y<370;y+=15){g.beginPath();g.moveTo(210,y);g.lineTo(210,y+7);g.strokePath();}
+g.fillStyle(0xffdf61,1);g.fillTriangle(201,366,219,366,210,380);
+this.dragStartDot=this.track(this.add.circle(210,310,8,0xffdf61,1));
+this.dragGuideLabel=this.txt(247,343,'拖到这里 ↓',12,'#ffdf61',0,'bold');
+}
+resetHelmet(){
+if(this.helmet&&this.helmet.active)this.helmet.destroy();
+this.helmet=this.image('helmet',this.helmetHome.x,this.helmetHome.y,104,86,-5);
+this.helmet.setInteractive({draggable:true,useHandCursor:true});this.input.setDraggable(this.helmet);this.dragItem=this.helmet;
+this.helmet.on('dragstart',()=>{if(this.pigeonTarget){this.pigeonTarget.setFillStyle(0x63f5c8,.2);this.pigeonTarget.setStrokeStyle(4,0xffdf61,1);}if(this.dragGuideLabel)this.dragGuideLabel.setText('松手放入圆圈');});
+this.helmet.on('drag',()=>{if(this.pigeonTarget){const d=Phaser.Math.Distance.Between(this.helmet.x,this.helmet.y,190,390);this.pigeonTarget.setStrokeStyle(4,d<65?0x63f5c8:0xffdf61,1);}});
+}
 stageSneeze(){
 this.image('oldman',210,397,185,200,0);this.txt(210,545,'啊……啊……阿嚏！',20,'#ff91b5');
 this.txt(210,606,'憋住进度条，在绿色区间松手',13,'#c1c9e9',.5,'normal');
@@ -180,11 +216,25 @@ bossTap(){if(this.bossAlert){this.actionSuccess('装忙成功！你刚刚合上�
 checkPads(){if(this.pad.left!==null&&this.pad.right!==null&&Math.abs(this.pad.left-this.pad.right)<260){this.actionSuccess('双喷射器同时点火！超人进入低轨道。');this.pad={left:null,right:null};if(this.leftPad)this.leftPad.setFillStyle(0x2a9dbd);if(this.rightPad)this.rightPad.setFillStyle(0x8254bb);}else if(this.pad.left!==null&&this.pad.right!==null){this.actionMiss('要同时按下！再来一次。');this.pad={left:null,right:null};}}
 actionSuccess(msg){
 this.hitCount++;this.combo++;this.best=Math.max(this.best,this.combo);this.score+=100+Math.min(100,this.combo*8);if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal+(this.hitCount>=this.goal?'  ✓':''));
-this.feedback(msg,true);for(let i=0;i<9;i++){const a=(Math.PI*2*i/9)+Math.random()*.2,dist=Phaser.Math.Between(36,88),dot=this.track(this.add.circle(210,440,Phaser.Math.Between(3,6),COLORS[Math.max(0,Math.min(8,this.stage))],1));this.tweens.add({targets:dot,x:210+Math.cos(a)*dist,y:440+Math.sin(a)*dist,alpha:0,scale:.2,duration:360,ease:'Quad.Out',onComplete:()=>dot.destroy()});}
+this.feedback(msg,true);this.capsuleBurst(210,440,COLORS[Math.max(0,Math.min(8,this.stage))]);
 }
 actionResult(ok,msg){if(ok)this.actionSuccess(msg);else this.actionMiss(msg);}
-actionMiss(msg){this.combo=0;if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal);if(this.time.now-this.lastWrong>450){this.feedback(msg,false);this.lastWrong=this.time.now;}}
-feedback(msg,good){if(this.feedbackText&&this.feedbackText.active)this.feedbackText.destroy();const f=this.txt(210,810,msg,14,good?'#63f5c8':'#ff9eaf');this.feedbackText=f;this.time.delayedCall(850,()=>{if(f&&f.active)f.destroy();});}
+actionMiss(msg){this.combo=0;if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal);if(this.time.now-this.lastWrong>450){this.feedback(msg,false);this.lastWrong=this.time.now;const shake=this.add.rectangle(210,440,330,250,0xff668c,.001).setStrokeStyle(3,0xff668c,.7);this.track(shake);this.tweens.add({targets:shake,alpha:.14,duration:70,yoyo:true,repeat:1,onComplete:()=>shake.destroy()});}}
+feedback(msg,good){
+if(this.feedbackContainer&&this.feedbackContainer.active)this.feedbackContainer.destroy();
+const c=this.add.container(210,770);c.setDepth(1000);
+const bg=this.add.graphics();bg.fillStyle(good?0x123c3b:0x4a1e37,.98);bg.fillRoundedRect(-174,-25,348,50,16);bg.lineStyle(2,good?0x63f5c8:0xff668c,.95);bg.strokeRoundedRect(-174,-25,348,50,16);
+const icon=this.add.text(-151,0,good?'✓':'!',{fontSize:'22px',fontStyle:'bold',color:good?'#63f5c8':'#ff668c'}).setOrigin(.5);
+const text=this.add.text(8,0,msg,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:'14px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:285}}).setOrigin(.5);
+c.add([bg,icon,text]);this.feedbackContainer=c;this.objects.push(c);
+c.setAlpha(0);c.y=792;this.tweens.add({targets:c,y:770,alpha:1,duration:150,ease:'Back.Out'});
+if(good){const flash=this.add.rectangle(210,430,W,H,0x63f5c8,.12).setDepth(900);this.tweens.add({targets:flash,alpha:0,duration:180,onComplete:()=>flash.destroy()});}
+this.time.delayedCall(1000,()=>{if(c&&c.active){this.tweens.add({targets:c,y:792,alpha:0,duration:150,onComplete:()=>c.destroy()});}});
+}
+capsuleBurst(x,y,color){
+const ring=this.track(this.add.circle(x,y,15,0xffffff,.001).setStrokeStyle(4,color,.9));this.tweens.add({targets:ring,scale:3.2,alpha:0,duration:320,onComplete:()=>ring.destroy()});
+for(let i=0;i<8;i++){const a=i*Math.PI/4,d=Phaser.Math.Between(24,54),dot=this.track(this.add.circle(x,y,Phaser.Math.Between(3,6),color,1));this.tweens.add({targets:dot,x:x+Math.cos(a)*d,y:y+Math.sin(a)*d,alpha:0,scale:.2,duration:300,onComplete:()=>dot.destroy()});}
+}
 onMotion(e){
 if(this.stage!==7)return;const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const v=[a.x||0,a.y||0,a.z||0];if(this.motionPrev){const d=Math.abs(v[0]-this.motionPrev[0])+Math.abs(v[1]-this.motionPrev[1])+Math.abs(v[2]-this.motionPrev[2]);if(d>19&&this.time.now-this.lastShakeAt>650){this.lastShakeAt=this.time.now;this.shakeHit();}}this.motionPrev=v;
 }
