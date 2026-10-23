@@ -22,7 +22,7 @@ const LEVELS=[
 ];
 const COLORS=[0xff668c,0xffd34f,0x69e3c0,0x68c9ff,0xff789f,0xffb34f,0xb69aff,0x9a8cff,0xffdf61];
 class Party extends Phaser.Scene{
-constructor(){super('party');this.objects=[];this.pulses=[];this.stage=-1;this.score=0;this.combo=0;this.best=0;this.quick=false;this.holding=false;this.holdMs=0;this.swipeStart=null;this.pad={left:null,right:null};this.dragItem=null;this.motionPrev=null;this.lastShakeAt=0;this.mic=null;this.micData=null;this.audio=null;this.master=null;this.noiseBuffer=null;this.nextStep=0;this.stepIndex=0;this.lastBeatMs=0;this.elapsed=0;this.hitCount=0;this.goal=4;this.lastFeedbackAt=0;}
+constructor(){super('party');this.objects=[];this.pulses=[];this.stage=-1;this.score=0;this.combo=0;this.best=0;this.quick=false;this.holding=false;this.holdMs=0;this.swipeStart=null;this.pad={left:null,right:null};this.dragItem=null;this.motionPrev=null;this.lastShakeAt=0;this.mic=null;this.micData=null;this.audio=null;this.master=null;this.noiseBuffer=null;this.nextStep=0;this.stepIndex=0;this.lastBeatMs=0;this.elapsed=0;this.hitCount=0;this.goal=4;this.lastFeedbackAt=0;this.lastShoutAt=0;this.keyboardDoubleLatched=false;}
 preload(){}
 create(){
 this.drawBackdrop();this.input.addPointer(2);
@@ -85,7 +85,7 @@ if(this.stage===0&&this.flyTarget&&this.beatNo%2===0)this.moveFly();if(this.stag
 startRun(){this.score=0;this.combo=0;this.best=0;this.beatNo=0;this.startStage(0);}
 startStage(i){
 if(this.mic){this.mic.stream.getTracks().forEach(t=>t.stop());this.mic.ctx.close();this.mic=null;this.micData=null;}
-this.clearObjects();this.stage=i;this.stageFinished=false;this.holding=false;this.holdMs=0;this.swipeStart=null;this.pad={left:null,right:null};this.elapsed=0;this.duration=this.quick?5000:14000;this.hitCount=0;this.goal=this.quick?1:4;this.lastWrong=0;this.lastShakeAt=0;
+this.clearObjects();this.stage=i;this.stageFinished=false;this.holding=false;this.holdMs=0;this.swipeStart=null;this.pad={left:null,right:null};this.elapsed=0;this.duration=this.quick?5000:14000;this.hitCount=0;this.goal=this.quick?1:4;this.lastWrong=0;this.lastShakeAt=0;this.lastShoutAt=0;this.keyboardDoubleLatched=false;
 if(i>=LEVELS.length){this.showResults();return;}
 const L=LEVELS[i];this.drawStageDecor(i);
 this.txt(24,30,'关卡 '+String(i+1).padStart(2,'0')+' / 09',12,'#aeb6da',0,'bold');
@@ -184,7 +184,7 @@ this.feedback(msg,true);for(let i=0;i<9;i++){const a=(Math.PI*2*i/9)+Math.random
 }
 actionResult(ok,msg){if(ok)this.actionSuccess(msg);else this.actionMiss(msg);}
 actionMiss(msg){this.combo=0;if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal);if(this.time.now-this.lastWrong>450){this.feedback(msg,false);this.lastWrong=this.time.now;}}
-feedback(msg,good){if(this.feedbackText&&this.feedbackText.active)this.feedbackText.destroy();this.feedbackText=this.txt(210,810,msg,14,good?'#63f5c8':'#ff9eaf');this.time.delayedCall(850,()=>{if(this.feedbackText&&this.feedbackText.active)this.feedbackText.destroy();});}
+feedback(msg,good){if(this.feedbackText&&this.feedbackText.active)this.feedbackText.destroy();const f=this.txt(210,810,msg,14,good?'#63f5c8':'#ff9eaf');this.feedbackText=f;this.time.delayedCall(850,()=>{if(f&&f.active)f.destroy();});}
 onMotion(e){
 if(this.stage!==7)return;const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const v=[a.x||0,a.y||0,a.z||0];if(this.motionPrev){const d=Math.abs(v[0]-this.motionPrev[0])+Math.abs(v[1]-this.motionPrev[1])+Math.abs(v[2]-this.motionPrev[2]);if(d>19&&this.time.now-this.lastShakeAt>650){this.lastShakeAt=this.time.now;this.shakeHit();}}this.motionPrev=v;
 }
@@ -200,7 +200,7 @@ this.elapsed+=delta;const left=Math.max(0,this.duration-this.elapsed);if(this.ti
 if(this.beatDots){const idx=(this.beatNo||0)%4;this.beatDots.forEach((d,j)=>{d.setFillStyle(j===idx?COLORS[this.stage]:0x5b6284,j===idx?1:.45);if(j===idx)d.setScale(1.25);else d.setScale(1);});}
 if(this.stage===2){const phase=this.elapsed%2200,alert=phase<820;if(alert!==this.bossAlert){this.bossAlert=alert;if(this.bossSprite)this.bossSprite.setVisible(alert);if(this.alertText)this.alertText.setText(alert?'🚨 老板出现！快装忙！':'☕ 老板走了，继续摸鱼');if(this.alertText)this.alertText.setColor(alert?'#ff668c':'#9fb1d8');}}
 if(this.holding){this.holdMs+=delta;const v=(this.holdMs%1500)/1500;if(this.holdMarker)this.holdMarker.x=70+280*v;}
-if(this.stage===6&&this.keys.A.isDown&&this.keys.L.isDown){this.actionSuccess('双喷射器同时点火！');this.pad={left:null,right:null};}
+if(this.stage===6&&this.keys.A.isDown&&this.keys.L.isDown&&!this.keyboardDoubleLatched){this.keyboardDoubleLatched=true;this.actionSuccess('双喷射器同时点火！');this.pad={left:null,right:null};}if(!this.keys.A.isDown||!this.keys.L.isDown)this.keyboardDoubleLatched=false;
 if(this.stage===8&&this.mic&&this.time.now-this.lastShoutAt>600){this.mic.analyser.getByteTimeDomainData(this.micData);let sum=0;for(let i=0;i<this.micData.length;i++){const n=(this.micData[i]-128)/128;sum+=n*n;}if(Math.sqrt(sum/this.micData.length)>.2)this.shoutHit();}
 if(left<=0){this.stageFinished=true;this.feedback(this.hitCount>=this.goal?'漂亮！目标完成，下一关更疯。':'时间到！下一关换种操作。',this.hitCount>=this.goal);this.time.delayedCall(650,()=>this.startStage(this.stage+1));}
 }
