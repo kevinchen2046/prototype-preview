@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#11142b"><title>节拍疯人秀 · Beat Bonkers</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b18;color:#fff;font-family:system-ui,"Microsoft YaHei",sans-serif}body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 15%,#29204b,#101329 55%,#070812)}#frame{width:min(100vw,430px);height:min(100dvh,900px);aspect-ratio:420/860;position:relative;overflow:hidden;border-radius:26px;box-shadow:0 24px 80px #0009,0 0 0 1px #ffffff18;background:#11142b}#game,#game canvas{width:100%;height:100%;display:block;touch-action:none}#note{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);color:#9da3c6;font-size:11px;white-space:nowrap;opacity:.8}@media(max-height:700px){#frame{height:100dvh;width:min(100vw,calc(100dvh * 420 / 860));border-radius:0}#note{display:none}}
+</style><script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script></head>
+<body><div id="frame"><div id="game"></div></div><div id="note">竖屏小游戏接力 · 点击开始后启用节拍音效</div>
+<script>
+(()=>{'use strict';
+const W=420,H=860;
+const LEVELS=[
+{name:'找出假英雄',type:'点击',desc:'英雄队伍里混进了吸血鬼，点出冒牌货！',bpm:94},
+{name:'找出冒牌香蕉',type:'点击',desc:'找出戴着墨镜、装酷的那根香蕉。',bpm:99},
+{name:'哪条鱼在撒谎',type:'点击',desc:'它说自己不会游泳——点出说谎的鱼。',bpm:104},
+{name:'给鸽子戴安全帽',type:'拖拽',desc:'把安全帽拖到鸽子的头上。',bpm:110},
+{name:'忍住这个喷嚏',type:'按住 / 松开',desc:'按住憋气，进绿色区域时松手！',bpm:116},
+{name:'把飞来的披萨打回去',type:'快速滑动',desc:'按照箭头方向快速滑动，把披萨打回去！',bpm:122},
+{name:'启动超人喷射器',type:'双指点击',desc:'同时按住左右喷射器，让超人起飞。',bpm:128},
+{name:'摇醒吸血鬼',type:'晃动手机',desc:'晃醒睡过头的吸血鬼！',bpm:136},
+{name:'尖叫让超人起飞',type:'声音触发',desc:'开启麦克风大喊一声，或者点模拟尖叫。',bpm:146}
+];
+class Party extends Phaser.Scene{
+constructor(){super('party');this.objects=[];this.pulses=[];this.stage=-1;this.score=0;this.combo=0;this.best=0;this.quick=false;this.locked=false;this.holding=false;this.hold=0;this.swipeStart=null;this.pad={left:null,right:null};this.dragItem=null;this.motionPrev=null;this.motionEnabled=false;this.mic=null;this.micData=null;this.audio=null;this.nextBeat=0;this.elapsed=0;}
+preload(){[['hero','hero.svg'],['banana','banana.svg'],['shades','banana_shades.svg'],['fish','fish.svg'],['liar','fish_lie.svg'],['pigeon','pigeon.svg'],['helmet','helmet.svg'],['oldman','oldman.svg'],['pizza','pizza.svg'],['fly','hero_fly.svg'],['vampire','vampire.svg'],['shout','hero_shout.svg']].forEach(a=>this.load.image(a[0],'assets/'+a[1]));}
+create(){
+this.drawBackdrop();this.input.addPointer(2);
+this.input.on('pointerdown',p=>this.onDown(p));this.input.on('pointerup',p=>this.onUp(p));
+this.input.on('drag', (p,obj,x,y)=>{if(obj===this.dragItem){obj.x=x;obj.y=y;}});
+this.input.on('dragend',(p,obj)=>{if(obj===this.dragItem){this.dragItem=null;if(Phaser.Math.Distance.Between(obj.x,obj.y,210,408)<104)this.answer(true,'安全帽完美着陆！');else{obj.x=210;obj.y=285;this.feedback('差一点，再来一次！',false);}}});
+this.keys=this.input.keyboard.addKeys({A:Phaser.Input.Keyboard.KeyCodes.A,L:Phaser.Input.Keyboard.KeyCodes.L});
+this.motionHandler=e=>this.onMotion(e);window.addEventListener('devicemotion',this.motionHandler,{passive:true});
+this.showTitle();
+}
+drawBackdrop(){
+const g=this.add.graphics();g.fillStyle(0x11142b,1);g.fillRect(0,0,W,H);g.fillStyle(0x201a43,.9);g.fillRect(0,0,W,190);g.fillStyle(0x653b9d,.15);g.fillCircle(55,175,150);g.fillStyle(0x168a91,.12);g.fillCircle(390,610,175);
+for(let i=0;i<42;i++){const x=(i*79+23)%W,y=(i*137+51)%H;g.fillStyle(i%3===0?0xffd84d:0xffffff,.15+(i%4)*.07);g.fillCircle(x,y,i%5===0?2.5:1.3);}
+}
+track(o){this.objects.push(o);return o;}
+clearObjects(){this.objects.forEach(o=>{if(o&&o.destroy)o.destroy();});this.objects=[];this.pulses=[];this.barGraphics=null;}
+txt(x,y,text,size=20,color='#fff',origin=.5,weight='bold'){return this.track(this.add.text(x,y,text,{fontFamily:'system-ui, Microsoft YaHei, sans-serif',fontSize:size+'px',fontStyle:weight,color,align:'center',wordWrap:{width:350},lineSpacing:5}).setOrigin(origin,.5));}
+button(x,y,w,h,label,fn,color=0x6b58d6){const r=this.track(this.add.rectangle(x,y,w,h,color,1).setStrokeStyle(2,0xffffff,.24).setInteractive({useHandCursor:true}));r.setRadius?.(16);this.track(this.add.text(x,y,label,{fontFamily:'system-ui, Microsoft YaHei, sans-serif',fontSize:'17px',fontStyle:'bold',color:'#fff',align:'center'}).setOrigin(.5));r.on('pointerdown',fn);return r;}
+image(key,x,y,w,h,angle=0){const o=this.track(this.add.image(x,y,key).setDisplaySize(w,h).setAngle(angle));this.pulses.push({o,sx:o.scaleX,sy:o.scaleY});return o;}
+showTitle(){
+this.clearObjects();this.stage=-1;this.locked=false;
+this.image('hero',210,270,172,172,-5);this.image('banana',110,348,74,74,12);this.image('fish',312,350,82,82,-12);
+this.txt(210,90,'节拍疯人秀',37,'#ffdf61');this.txt(210,137,'BEAT BONKERS',16,'#b7b4ff');this.txt(210,425,'9 款小游戏 · 9 种操作',21,'#ffffff');this.txt(210,465,'从轻松点击开始，越玩越离谱。',15,'#b8bfdc','center','normal');
+this.button(210,580,252,62,'开始完整节奏  ·  约 2 分 25 秒',()=>{this.quick=false;this.startAudio();this.startRun();},0x7259e8);
+this.button(210,660,252,54,'快速预览  ·  每关 5 秒',()=>{this.quick=true;this.startAudio();this.startRun();},0x2c7c8b);
+this.txt(210,747,'耳机体验更佳 · 手机可尝试摇动 / 麦克风',12,'#9da3c6','center','normal');
+}
+startAudio(){try{if(!this.audio){const C=window.AudioContext||window.webkitAudioContext;if(C)this.audio=new C();}if(this.audio){this.audio.resume();this.nextBeat=this.audio.currentTime+.12;}}catch(e){}}
+playBeat(){
+if(!this.audio)return;const t=this.audio.currentTime;
+try{const osc=this.audio.createOscillator(),gain=this.audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(145,t);osc.frequency.exponentialRampToValueAtTime(48,t+.13);gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(.22,t+.008);gain.gain.exponentialRampToValueAtTime(.0001,t+.15);osc.connect(gain);gain.connect(this.audio.destination);osc.start(t);osc.stop(t+.16);
+if(this.beatCount%2===0){const hi=this.audio.createOscillator(),hg=this.audio.createGain();hi.type='square';hi.frequency.setValueAtTime(950,t);hg.gain.setValueAtTime(.025,t);hg.gain.exponentialRampToValueAtTime(.0001,t+.035);hi.connect(hg);hg.connect(this.audio.destination);hi.start(t);hi.stop(t+.04);}this.beatCount=(this.beatCount||0)+1;}catch(e){}
+}
+startRun(){this.score=0;this.combo=0;this.best=0;this.beatCount=0;this.startStage(0);}
+startStage(i){
+this.clearObjects();this.stage=i;this.locked=false;this.holding=false;this.hold=0;this.swipeStart=null;this.pad={left:null,right:null};this.elapsed=0;this.duration=this.quick?5000:15000;
+if(i>=LEVELS.length){this.showResults();return;}
+const L=LEVELS[i];this.txt(210,42,'第 '+(i+1)+' / 9 关',14,'#a9afd2');this.txt(210,82,L.name,27,'#ffdf61');this.txt(210,126,L.desc,15,'#f4f2ff','center','normal');
+this.txt(72,177,L.type,13,'#68e4c4');this.txt(347,177,L.bpm+' BPM',13,'#b6a8ff');
+this.track(this.add.rectangle(210,207,330,7,0x343858).setOrigin(.5));this.progress=this.track(this.add.rectangle(45,207,0,7,0x63e6be).setOrigin(0,.5));this.timeText=this.txt(365,230,'15.0s',12,'#c2c6df');
+if(i===0)this.stageHeroes();if(i===1)this.stageBananas();if(i===2)this.stageFish();if(i===3)this.stagePigeon();if(i===4)this.stageSneeze();if(i===5)this.stagePizza();if(i===6)this.stagePads();if(i===7)this.stageShake();if(i===8)this.stageShout();
+}
+stageHeroes(){[82,210,338].forEach((x,i)=>{const o=this.image(i===2?'vampire':'hero',x,420,96,118,i===1?4:-3);o.setInteractive({useHandCursor:true}).on('pointerdown',()=>this.answer(i===2,i===2?'抓到冒牌吸血鬼！':'这位英雄看起来很无辜……'));});this.txt(210,585,'哪一个不是真正的英雄？',17,'#b9c1e5','center','normal');}
+stageBananas(){[82,210,338].forEach((x,i)=>{const o=this.image(i===1?'shades':'banana',x,425,105,115,i===0?-8:i===2?8:0);o.setInteractive({useHandCursor:true}).on('pointerdown',()=>this.answer(i===1,i===1?'墨镜香蕉被逮到了！':'这根香蕉很普通，再找找。'));});this.txt(210,585,'点击最会装酷的香蕉。',17,'#b9c1e5','center','normal');}
+stageFish(){[82,210,338].forEach((x,i)=>{const o=this.image(i===1?'liar':'fish',x,420,116,106,i===0?-5:i===2?7:0);o.setInteractive({useHandCursor:true}).on('pointerdown',()=>this.answer(i===1,i===1?'谎话被你听出来了！':'它真的会游泳，再试试。'));});this.txt(210,585,'谁在说谎？',17,'#b9c1e5','center','normal');}
+stagePigeon(){
+this.image('pigeon',210,468,168,168,-4);this.txt(210,600,'把安全帽拖到鸽子头上',17,'#b9c1e5','center','normal');
+const h=this.image('helmet',210,285,106,88,4);h.setInteractive({draggable:true,useHandCursor:true});this.input.setDraggable(h);this.dragItem=h;
+this.txt(210,690,'小提示：拖到画面中间偏下的位置。',12,'#8e98bd','center','normal');
+}
+stageSneeze(){
+this.image('oldman',210,385,174,188,-3);this.txt(210,535,'憋住！憋住！',20,'#ff9aa9');
+this.track(this.add.rectangle(210,600,280,24,0x303653).setStrokeStyle(2,0xffffff,.2));this.barGraphics=this.track(this.add.graphics());
+this.txt(210,650,'按住下方大按钮，绿色区间松手',14,'#b9c1e5','center','normal');
+const r=this.track(this.add.rectangle(210,716,240,72,0x9c456e).setStrokeStyle(3,0xffa9c4,.6));r.setInteractive({useHandCursor:true});this.holdButton=r;
+this.txt(210,716,'按住憋气！',20,'#fff');
+}
+stagePizza(){this.image('pizza',210,415,174,174,14);this.swipeDir=Math.random()<.5?-1:1;this.txt(210,560,this.swipeDir<0?'← 向左快速滑动':'快速向右滑动 →',22,'#ffdf61');this.txt(210,625,'从披萨附近划出一道长长的手势。',14,'#b9c1e5','center','normal');}
+stagePads(){
+this.image('fly',210,375,180,190,-4);
+this.track(this.add.rectangle(105,600,120,108,0x286a86).setStrokeStyle(3,0x6bdcff,.8));this.track(this.add.rectangle(315,600,120,108,0x734e9b).setStrokeStyle(3,0xd2a5ff,.8));
+this.txt(105,590,'左喷射器',15,'#fff');this.txt(315,590,'右喷射器',15,'#fff');this.txt(210,710,'同时按住左右两侧',17,'#b9c1e5');this.txt(210,755,'桌面也可同时按 A + L',13,'#8e98bd','center','normal');
+}
+stageShake(){this.image('vampire',210,410,174,190,5);this.txt(210,555,'Z z z …',28,'#b6a8ff');this.button(210,650,240,58,'启用摇晃传感器',()=>this.enableMotion(),0x5b4b9b);this.button(210,724,240,54,'桌面模拟摇动',()=>this.answer(true,'吸血鬼终于醒了！'),0x2c7c8b);}
+stageShout(){this.image('shout',210,400,180,190,-4);this.txt(210,550,'A A A A A ！',22,'#ffdf61');this.button(210,638,240,58,'开启麦克风',()=>this.enableMic(),0x5b4b9b);this.button(210,712,240,54,'桌面模拟尖叫',()=>this.answer(true,'音量爆表！超人起飞！'),0x2c7c8b);this.txt(210,780,'麦克风仅在点击授权后使用',12,'#8e98bd','center','normal');}
+onDown(p){
+if(this.stage===4&&p.x>90&&p.x<330&&p.y>650&&p.y<790){this.holding=true;this.hold=0;return;}
+if(this.stage===5){this.swipeStart={x:p.x,y:p.y,t:this.time.now};return;}
+if(this.stage===6){if(p.x<190)this.pad.left=this.time.now;else if(p.x>230)this.pad.right=this.time.now;this.checkPads();return;}
+}
+onUp(p){
+if(this.stage===4&&this.holding){this.holding=false;this.answer(this.hold>=.58&&this.hold<=.82,this.hold>=.58&&this.hold<=.82?'喷嚏被你成功憋回去了！':'时机不对！卡在绿色区域再松手。');return;}
+if(this.stage===5&&this.swipeStart){const dx=p.x-this.swipeStart.x,dy=p.y-this.swipeStart.y;const good=Math.abs(dx)>72&&Math.abs(dx)>Math.abs(dy)*1.15&&(dx<0?-1:1)===this.swipeDir;this.swipeStart=null;this.answer(good,good?'披萨反弹成功！':'方向不对或滑动太短，再试一次。');}
+}
+checkPads(){if(this.pad.left!==null&&this.pad.right!==null&&Math.abs(this.pad.left-this.pad.right)<450)this.answer(true,'双喷射器同时点火！');}
+onMotion(e){
+if(this.stage!==7)return;const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const v=[a.x||0,a.y||0,a.z||0];if(this.motionPrev){const d=Math.abs(v[0]-this.motionPrev[0])+Math.abs(v[1]-this.motionPrev[1])+Math.abs(v[2]-this.motionPrev[2]);if(d>17)this.answer(true,'晃动成功！吸血鬼醒了！');}this.motionPrev=v;
+}
+enableMotion(){try{const D=window.DeviceMotionEvent;if(D&&typeof D.requestPermission==='function')D.requestPermission().then(s=>{if(s==='granted')this.feedback('传感器已启用，摇一摇！',true);else this.feedback('没有获得传感器权限，可使用桌面模拟按钮。',false);}).catch(()=>this.feedback('传感器不可用，请使用模拟按钮。',false));else this.feedback('现在摇动手机试试！',true);this.motionEnabled=true;}catch(e){this.feedback('传感器不可用，请使用模拟按钮。',false);}}
+async enableMic(){
+try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('unsupported');const stream=await navigator.mediaDevices.getUserMedia({audio:true});const C=window.AudioContext||window.webkitAudioContext;const ctx=new C();const source=ctx.createMediaStreamSource(stream);const analyser=ctx.createAnalyser();analyser.fftSize=256;source.connect(analyser);this.mic={stream,ctx,analyser};this.micData=new Uint8Array(analyser.fftSize);this.feedback('麦克风已开启，大喊一声！',true);}catch(e){this.feedback('麦克风不可用或未授权，可点模拟尖叫。',false);}
+}
+update(_,delta){
+if(this.stage>=0&&this.stage<LEVELS.length&&!this.locked){
+this.elapsed+=delta;const left=Math.max(0,this.duration-this.elapsed);if(this.timeText)this.timeText.setText((left/1000).toFixed(1)+'s');if(this.progress)this.progress.width=330*(1-left/this.duration);
+if(this.holding){this.hold=Math.min(1,this.hold+delta/2600);if(this.barGraphics){this.barGraphics.clear();this.barGraphics.fillStyle(0x63e6be,1);this.barGraphics.fillRect(73+280*.58,588,280*.24,24);this.barGraphics.fillStyle(0xff6b9a,1);this.barGraphics.fillRect(73,588,280*this.hold,24);}}
+if(this.stage===6&&this.keys.A.isDown&&this.keys.L.isDown)this.answer(true,'双喷射器同时点火！');
+if(this.stage===8&&this.mic){this.mic.analyser.getByteTimeDomainData(this.micData);let sum=0;for(let i=0;i<this.micData.length;i++){const n=(this.micData[i]-128)/128;sum+=n*n;}if(Math.sqrt(sum/this.micData.length)>.19)this.answer(true,'音量爆表！超人起飞！');}
+if(left<=0){this.feedback('时间到！继续下一关。',false);this.locked=true;this.time.delayedCall(650,()=>this.startStage(this.stage+1));}
+}
+if(this.audio&&this.stage>=0&&this.stage<LEVELS.length){const bpm=LEVELS[this.stage].bpm;while(this.audio.currentTime>=this.nextBeat){this.playBeat();this.nextBeat+=60/bpm;}}
+const t=this.time.now/1000;this.pulses.forEach(p=>{if(p.o&&p.o.active){const k=1+.035*Math.sin(t*6.28*(this.stage>=0&&this.stage<9?LEVELS[this.stage].bpm/60:1));p.o.setScale(p.sx*k,p.sy*k);}});
+}
+answer(ok,msg){
+if(this.locked)return;if(ok){this.locked=true;this.score+=100+this.combo*10;this.combo++;this.best=Math.max(this.best,this.combo);this.feedback(msg||'漂亮！',true);this.time.delayedCall(850,()=>this.startStage(this.stage+1));}
+else{this.combo=0;this.feedback(msg||'再试一次！',false);}
+}
+feedback(msg,good){const f=this.txt(210,815,msg,15,good?'#63e6be':'#ff9ba8');this.time.delayedCall(780,()=>{if(f&&f.active)f.destroy();});}
+showResults(){
+this.clearObjects();this.stage=9;this.txt(210,110,'节拍挑战完成！',32,'#ffdf61');this.image('hero',210,285,170,170,-5);this.txt(210,425,'得分  '+this.score,28,'#ffffff');this.txt(210,470,'最佳连击  '+this.best,19,'#63e6be');this.txt(210,530,'九种操作，你全部体验过了。',16,'#b9c1e5','center','normal');this.button(210,640,250,60,'再来一局',()=>{this.startAudio();this.startRun();},0x7259e8);this.button(210,716,250,54,'返回标题',()=>this.showTitle(),0x2c7c8b);
+}
+}
+const config={type:Phaser.AUTO,parent:'game',width:W,height:H,backgroundColor:'#11142b',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true,pixelArt:false},scene:[Party]};
+new Phaser.Game(config);
+})();
+</script></body></html>
