@@ -4,6 +4,7 @@
 
 - 导航页：[https://kevinchen2046.github.io/prototype-preview/](https://kevinchen2046.github.io/prototype-preview/)
 - AI 文明演化第一章：[https://kevinchen2046.github.io/prototype-preview/ai-civilization/](https://kevinchen2046.github.io/prototype-preview/ai-civilization/)
+- 山野飞车（Cycling Adventure）：[https://kevinchen2046.github.io/prototype-preview/cycling-adventure/](https://kevinchen2046.github.io/prototype-preview/cycling-adventure/)
 - 节拍疯人秀 Beat Bonkers：[https://kevinchen2046.github.io/prototype-preview/beat-bonkers/](https://kevinchen2046.github.io/prototype-preview/beat-bonkers/)
 
 ## 目录约定
