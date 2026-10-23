@@ -4,12 +4,12 @@ const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 ctx.imageSmoothingEnabled=true;
 const assetPaths={
  bikeFrame:'assets/characters/cyclist/bike_frame.svg',wheel:'assets/characters/cyclist/wheel.svg',
- ride:'assets/characters/cyclist/rider_ride.svg',takeoff:'assets/characters/cyclist/rider_takeoff.svg',apex:'assets/characters/cyclist/rider_apex.svg',flip_return:'assets/characters/cyclist/rider_flip_return.svg',descent:'assets/characters/cyclist/rider_descent.svg',landing:'assets/characters/cyclist/rider_landing.svg',recover:'assets/characters/cyclist/rider_recover.svg',
- rock:'assets/obstacles/rock.svg',log:'assets/obstacles/log.svg',ramp:'assets/obstacles/ramp.svg',
- mountain:'assets/environments/mountain.svg',forest:'assets/environments/forest.svg',canyon:'assets/environments/canyon.svg',volcano:'assets/environments/volcano.svg'
+ ride:'assets/characters/cyclist/rider_ride.svg',takeoff:'assets/characters/cyclist/rider_takeoff.svg',apex:'assets/characters/cyclist/rider_apex.svg',flip_return:'assets/characters/cyclist/rider_flip_return.svg',descent:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/characters/cyclist/rider_descent.svg',landing:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/characters/cyclist/rider_landing.svg',recover:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/characters/cyclist/rider_recover.svg',
+ rock:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/obstacles/rock.svg',log:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/obstacles/log.svg',ramp:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/obstacles/ramp.svg',
+ mountain:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/environments/mountain.svg',forest:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/environments/forest.svg',canyon:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/environments/canyon.svg',volcano:'https://raw.githubusercontent.com/kevinchen2046/game-cycling-adventure/main/assets/environments/volcano.svg'
 };
 const images={};let loaded=0;
-for(const [key,src] of Object.entries(assetPaths)){const img=new Image();img.onload=()=>{loaded++;};img.onerror=()=>console.warn('Asset failed to load:',src);img.src=src;images[key]=img;}
+for(const [key,src] of Object.entries(assetPaths)){const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{loaded++;};img.onerror=()=>console.warn('Asset failed to load:',src);img.src=src;images[key]=img;}
 const state={mode:'riding',elapsed:0,worldDistance:0,speed:390,hazardGap:720,verticalOffset:0,verticalVelocity:0,touchHeld:false,flipAngle:0,airTime:0,score:0,recoveryProgress:0,landingPoseTimer:0,nextSpawnDistance:650,obstacles:[],pose:'',background:''};
 const rand=(min,max)=>min+Math.random()*(max-min);
 const image=(key,x,y,w,h,rotation=0,originX=.5,originY=.5)=>{const img=images[key];if(!img||!img.complete||!img.naturalWidth)return;ctx.save();ctx.translate(x,y);ctx.rotate(rotation);ctx.drawImage(img,-w*originX,-h*originY,w,h);ctx.restore();};
