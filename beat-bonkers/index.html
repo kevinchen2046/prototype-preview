@@ -1,151 +1,216 @@
 <!doctype html>
 <html lang="zh-CN"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#11142b"><title>节拍疯人秀 · Beat Bonkers</title>
+<meta name="theme-color" content="#0b0d20"><title>节拍疯人秀 · Beat Bonkers</title>
 <style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b18;color:#fff;font-family:system-ui,"Microsoft YaHei",sans-serif}body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 15%,#29204b,#101329 55%,#070812)}#frame{width:min(100vw,430px);height:min(100dvh,900px);aspect-ratio:420/860;position:relative;overflow:hidden;border-radius:26px;box-shadow:0 24px 80px #0009,0 0 0 1px #ffffff18;background:#11142b}#game,#game canvas{width:100%;height:100%;display:block;touch-action:none}#note{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);color:#9da3c6;font-size:11px;white-space:nowrap;opacity:.8}@media(max-height:700px){#frame{height:100dvh;width:min(100vw,calc(100dvh * 420 / 860));border-radius:0}#note{display:none}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080a16;color:#fff;font-family:Inter,system-ui,"Microsoft YaHei",sans-serif}body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 8%,#34305d 0,#13172e 48%,#070812 100%)}#frame{width:min(100vw,430px);height:min(100dvh,900px);aspect-ratio:420/860;position:relative;overflow:hidden;border-radius:28px;box-shadow:0 28px 90px #000b,0 0 0 1px #ffffff25;background:#11142b}#game,#game canvas{width:100%;height:100%;display:block;touch-action:none}#note{position:fixed;bottom:7px;left:50%;transform:translateX(-50%);color:#b9bddb;font-size:11px;white-space:nowrap;opacity:.8}@media(max-height:700px){#frame{height:100dvh;width:min(100vw,calc(100dvh * 420 / 860));border-radius:0}#note{display:none}}
 </style><script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script></head>
-<body><div id="frame"><div id="game"></div></div><div id="note">竖屏小游戏接力 · 点击开始后启用节拍音效</div>
+<body><div id="frame"><div id="game"></div></div><div id="note">戴上耳机 · 跟着鼓点 · 每关一种操作</div>
 <script>
 (()=>{'use strict';
 const W=420,H=860;
 const LEVELS=[
-{name:'找出假英雄',type:'点击',desc:'英雄队伍里混进了吸血鬼，点出冒牌货！',bpm:94},
-{name:'找出冒牌香蕉',type:'点击',desc:'找出戴着墨镜、装酷的那根香蕉。',bpm:99},
-{name:'哪条鱼在撒谎',type:'点击',desc:'它说自己不会游泳——点出说谎的鱼。',bpm:104},
-{name:'给鸽子戴安全帽',type:'拖拽',desc:'把安全帽拖到鸽子的头上。',bpm:110},
-{name:'忍住这个喷嚏',type:'按住 / 松开',desc:'按住憋气，进绿色区域时松手！',bpm:116},
-{name:'把飞来的披萨打回去',type:'快速滑动',desc:'按照箭头方向快速滑动，把披萨打回去！',bpm:122},
-{name:'启动超人喷射器',type:'双指点击',desc:'同时按住左右喷射器，让超人起飞。',bpm:128},
-{name:'摇醒吸血鬼',type:'晃动手机',desc:'晃醒睡过头的吸血鬼！',bpm:136},
-{name:'尖叫让超人起飞',type:'声音触发',desc:'开启麦克风大喊一声，或者点模拟尖叫。',bpm:146}
+{name:'苍蝇！离开吸血鬼的鼻子',type:'点击追击',desc:'点中乱飞的苍蝇！它会踩着鼓点逃跑。',bpm:108},
+{name:'超人登场，三连拍！',type:'点击踩点',desc:'等金色光圈收进圆环时，按下快门。',bpm:112},
+{name:'老板来了，快装忙！',type:'点击反应',desc:'警报亮起时狂点工作台；老板走了别乱动。',bpm:116},
+{name:'给鸽子戴上安全帽',type:'拖拽',desc:'把安全帽拖到鸽子头上，别砸到它的脚。',bpm:120},
+{name:'老奶奶的喷嚏要来了',type:'按住 / 松开',desc:'按住憋住喷嚏，在绿色区间松手。',bpm:124},
+{name:'把飞来的披萨打回去',type:'快速滑动',desc:'看箭头方向，快速把披萨拍飞！',bpm:128},
+{name:'双喷射器同时点火',type:'双指同时点击',desc:'同时按住左右喷射器，让超人冲上天。',bpm:132},
+{name:'吸血鬼赖床了',type:'摇晃手机',desc:'摇醒吸血鬼！桌面版可以点按钮模拟。',bpm:136},
+{name:'超人需要你的尖叫',type:'声音触发',desc:'对着手机大喊，或者点按钮模拟尖叫。',bpm:140}
 ];
+const COLORS=[0xff668c,0xffd34f,0x69e3c0,0x68c9ff,0xff789f,0xffb34f,0xb69aff,0x9a8cff,0xffdf61];
 class Party extends Phaser.Scene{
-constructor(){super('party');this.objects=[];this.pulses=[];this.stage=-1;this.score=0;this.combo=0;this.best=0;this.quick=false;this.locked=false;this.holding=false;this.hold=0;this.swipeStart=null;this.pad={left:null,right:null};this.dragItem=null;this.motionPrev=null;this.motionEnabled=false;this.mic=null;this.micData=null;this.audio=null;this.nextBeat=0;this.elapsed=0;}
+constructor(){super('party');this.objects=[];this.pulses=[];this.stage=-1;this.score=0;this.combo=0;this.best=0;this.quick=false;this.holding=false;this.holdMs=0;this.swipeStart=null;this.pad={left:null,right:null};this.dragItem=null;this.motionPrev=null;this.lastShakeAt=0;this.mic=null;this.micData=null;this.audio=null;this.master=null;this.noiseBuffer=null;this.nextStep=0;this.stepIndex=0;this.lastBeatMs=0;this.elapsed=0;this.hitCount=0;this.goal=4;this.lastFeedbackAt=0;}
 preload(){}
 create(){
 this.drawBackdrop();this.input.addPointer(2);
 this.input.on('pointerdown',p=>this.onDown(p));this.input.on('pointerup',p=>this.onUp(p));
-this.input.on('drag', (p,obj,x,y)=>{if(obj===this.dragItem){obj.x=x;obj.y=y;}});
-this.input.on('dragend',(p,obj)=>{if(obj===this.dragItem){this.dragItem=null;if(Phaser.Math.Distance.Between(obj.x,obj.y,210,408)<104)this.answer(true,'安全帽完美着陆！');else{obj.x=210;obj.y=285;this.feedback('差一点，再来一次！',false);}}});
-this.keys=this.input.keyboard.addKeys({A:Phaser.Input.Keyboard.KeyCodes.A,L:Phaser.Input.Keyboard.KeyCodes.L});
+this.input.on('drag',(p,obj,x,y)=>{if(obj===this.dragItem){obj.x=x;obj.y=y;}});
+this.input.on('dragend',(p,obj)=>{if(obj===this.dragItem){this.dragItem=null;const d=Phaser.Math.Distance.Between(obj.x,obj.y,210,385);if(d<82){this.actionSuccess('安全帽！鸽子现在是工地监理了。');this.resetHelmet();}else{this.actionMiss('差一点！把帽子放到鸽子头上。');this.resetHelmet();}}});
+this.keys=this.input.keyboard.addKeys({A:Phaser.Input.Keyboard.KeyCodes.A,L:Phaser.Input.Keyboard.KeyCodes.L,SPACE:Phaser.Input.Keyboard.KeyCodes.SPACE});
 this.motionHandler=e=>this.onMotion(e);window.addEventListener('devicemotion',this.motionHandler,{passive:true});
-this.showLoading();
-this.loadSvgSprites().then(()=>this.showTitle()).catch(err=>{this.clearObjects();this.txt(210,350,'角色资源加载失败',25,'#ff9ba8');this.txt(210,405,String(err&&err.message||err).slice(0,100),13,'#ffffff',.5,'normal');this.txt(210,470,'请刷新页面重试',16,'#ffdf61');});
-}
-showLoading(){this.clearObjects();this.txt(210,350,'正在加载角色资产…',23,'#ffdf61');this.txt(210,398,'把 SVG 转成 Canvas 纹理，避免黑块',13,'#b9c1e5',.5,'normal');}
-async loadSvgSprites(){
-const assets=[['hero','hero.svg'],['banana','banana.svg'],['shades','banana_shades.svg'],['fish','fish.svg'],['liar','fish_lie.svg'],['pigeon','pigeon.svg'],['helmet','helmet.svg'],['oldman','oldman.svg'],['pizza','pizza.svg'],['fly','hero_fly.svg'],['vampire','vampire.svg'],['shout','hero_shout.svg']];
-for(const [key,path] of assets){
-const response=await fetch('assets/'+path,{cache:'no-store'});
-if(!response.ok)throw new Error(path+' HTTP '+response.status);
-const svg=await response.text();
-const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
-const url=URL.createObjectURL(blob);
-try{
-const img=new Image();
-await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(path+' SVG 解码失败'));img.src=url;});
-const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
-const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,256);ctx.drawImage(img,0,0,256,256);
-if(this.textures.exists(key))this.textures.remove(key);
-this.textures.addCanvas(key,canvas);
-}finally{URL.revokeObjectURL(url);}
-}
+this.loadSvgSprites().then(()=>this.showTitle()).catch(err=>{this.clearObjects();this.txt(210,350,'角色资产加载失败',25,'#ff9ba8');this.txt(210,405,String(err&&err.message||err).slice(0,100),13,'#ffffff',.5,'normal');});
 }
 drawBackdrop(){
-const g=this.add.graphics();g.fillStyle(0x11142b,1);g.fillRect(0,0,W,H);g.fillStyle(0x201a43,.9);g.fillRect(0,0,W,190);g.fillStyle(0x653b9d,.15);g.fillCircle(55,175,150);g.fillStyle(0x168a91,.12);g.fillCircle(390,610,175);
-for(let i=0;i<42;i++){const x=(i*79+23)%W,y=(i*137+51)%H;g.fillStyle(i%3===0?0xffd84d:0xffffff,.15+(i%4)*.07);g.fillCircle(x,y,i%5===0?2.5:1.3);}
+const g=this.add.graphics();g.fillGradientStyle(0x211b43,0x211b43,0x0b1026,0x0b1026,1);g.fillRect(0,0,W,H);
+g.fillStyle(0x7053bf,.11);g.fillCircle(40,235,170);g.fillStyle(0x2bb7b2,.08);g.fillCircle(390,530,200);
+for(let i=0;i<58;i++){const x=(i*79+23)%W,y=(i*137+51)%H;g.fillStyle(i%4===0?0xffd84d:0xffffff,.12+(i%4)*.045);g.fillCircle(x,y,i%6===0?2.2:1);}
+const floor=this.add.graphics();floor.lineStyle(1,0x98a6ff,.08);for(let y=690;y<860;y+=24)floor.lineBetween(0,y,W,y);for(let x=-240;x<680;x+=55)floor.lineBetween(210,690,x,860);
+}
+async loadSvgSprites(){
+const assets=[['hero','hero.svg'],['banana','banana.svg'],['shades','banana_shades.svg'],['fish','fish.svg'],['liar','fish_lie.svg'],['pigeon','pigeon.svg'],['helmet','helmet.svg'],['oldman','oldman.svg'],['pizza','pizza.svg'],['fly','fly.svg'],['heroFly','hero_fly.svg'],['vampire','vampire.svg'],['shout','hero_shout.svg']];
+for(const [key,path] of assets){const response=await fetch('assets/'+path,{cache:'no-store'});if(!response.ok)throw new Error(path+' HTTP '+response.status);const svg=await response.text();const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(path+' SVG 解码失败'));img.src=url;});const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,256);ctx.drawImage(img,0,0,256,256);if(this.textures.exists(key))this.textures.remove(key);this.textures.addCanvas(key,canvas);}finally{URL.revokeObjectURL(url);}}
 }
 track(o){this.objects.push(o);return o;}
-clearObjects(){this.objects.forEach(o=>{if(o&&o.destroy)o.destroy();});this.objects=[];this.pulses=[];this.barGraphics=null;}
-txt(x,y,text,size=20,color='#fff',origin=.5,weight='bold'){return this.track(this.add.text(x,y,text,{fontFamily:'system-ui, Microsoft YaHei, sans-serif',fontSize:size+'px',fontStyle:weight,color,align:'center',wordWrap:{width:350},lineSpacing:5}).setOrigin(origin,.5));}
-button(x,y,w,h,label,fn,color=0x6b58d6){const r=this.track(this.add.rectangle(x,y,w,h,color,1).setStrokeStyle(2,0xffffff,.24).setInteractive({useHandCursor:true}));r.setRadius?.(16);this.track(this.add.text(x,y,label,{fontFamily:'system-ui, Microsoft YaHei, sans-serif',fontSize:'17px',fontStyle:'bold',color:'#fff',align:'center'}).setOrigin(.5));r.on('pointerdown',fn);return r;}
-image(key,x,y,w,h,angle=0){const o=this.track(this.add.image(x,y,key).setDisplaySize(w,h).setAngle(angle));this.pulses.push({o,sx:o.scaleX,sy:o.scaleY});return o;}
+clearObjects(){this.objects.forEach(o=>{try{if(o&&o.destroy)o.destroy();}catch(e){}});this.objects=[];this.pulses=[];this.eqBars=[];this.barGraphics=null;this.hitText=null;this.timeText=null;this.progress=null;this.alertText=null;}
+txt(x,y,text,size=20,color='#fff',origin=.5,weight='bold'){return this.track(this.add.text(x,y,text,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:size+'px',fontStyle:weight,color,align:'center',wordWrap:{width:350},lineSpacing:5}).setOrigin(origin,.5));}
+button(x,y,w,h,label,fn,color=0x6b58d6){
+const c=this.add.container(x,y),g=this.add.graphics();g.fillStyle(color,1);g.fillRoundedRect(-w/2,-h/2,w,h,18);g.lineStyle(2,0xffffff,.25);g.strokeRoundedRect(-w/2,-h/2,w,h,18);const t=this.add.text(0,0,label,{fontFamily:'Inter,system-ui,Microsoft YaHei,sans-serif',fontSize:'17px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-22}}).setOrigin(.5);c.add([g,t]);c.setSize(w,h);c.setInteractive(new Phaser.Geom.Rectangle(-w/2,-h/2,w,h),Phaser.Geom.Rectangle.Contains);c.on('pointerdown',fn);return this.track(c);
+}
+image(key,x,y,w,h,angle=0){const o=this.track(this.add.image(x,y,key).setDisplaySize(w,h).setAngle(angle));this.pulses.push({o,baseAngle:angle});return o;}
 showTitle(){
-this.clearObjects();this.stage=-1;this.locked=false;
-this.image('hero',210,270,172,172,-5);this.image('banana',110,348,74,74,12);this.image('fish',312,350,82,82,-12);
-this.txt(210,90,'节拍疯人秀',37,'#ffdf61');this.txt(210,137,'BEAT BONKERS',16,'#b7b4ff');this.txt(210,425,'9 款小游戏 · 9 种操作',21,'#ffffff');this.txt(210,465,'从轻松点击开始，越玩越离谱。',15,'#b8bfdc',.5,'normal');
-this.button(210,580,252,62,'开始完整节奏  ·  约 2 分 25 秒',()=>{this.quick=false;this.startAudio();this.startRun();},0x7259e8);
-this.button(210,660,252,54,'快速预览  ·  每关 5 秒',()=>{this.quick=true;this.startAudio();this.startRun();},0x2c7c8b);
-this.txt(210,747,'耳机体验更佳 · 手机可尝试摇动 / 麦克风',12,'#9da3c6',.5,'normal');
+this.clearObjects();this.stage=-1;this.hitCount=0;
+this.addGlow(210,290,170,0x7655e8,.18);this.image('hero',205,274,190,196,-4);this.image('fly',95,336,52,52,12);this.image('vampire',319,350,100,120,5);
+this.txt(210,76,'节拍疯人秀',38,'#ffdf61');this.txt(210,123,'BEAT BONKERS',15,'#b9b2ff');
+this.txt(210,438,'9 关 · 9 种操作 · 一路加速',20,'#ffffff');this.txt(210,478,'每个人都在跳，没人知道为什么。',14,'#b9c2e3',.5,'normal');
+this.button(210,583,282,62,'开始完整节奏  ·  约 2 分钟',()=>{this.quick=false;this.startAudio();this.startRun();},0x7655e8);
+this.button(210,662,282,54,'快速预览  ·  每关 5 秒',()=>{this.quick=true;this.startAudio();this.startRun();},0x247e8a);
+this.txt(210,753,'跟着鼓点看热闹，操作越玩越离谱。',12,'#a0a9d0',.5,'normal');
 }
-startAudio(){try{if(!this.audio){const C=window.AudioContext||window.webkitAudioContext;if(C)this.audio=new C();}if(this.audio){this.audio.resume();this.nextBeat=this.audio.currentTime+.12;}}catch(e){}}
-playBeat(){
-if(!this.audio)return;const t=this.audio.currentTime;
-try{const osc=this.audio.createOscillator(),gain=this.audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(145,t);osc.frequency.exponentialRampToValueAtTime(48,t+.13);gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(.22,t+.008);gain.gain.exponentialRampToValueAtTime(.0001,t+.15);osc.connect(gain);gain.connect(this.audio.destination);osc.start(t);osc.stop(t+.16);
-if(this.beatCount%2===0){const hi=this.audio.createOscillator(),hg=this.audio.createGain();hi.type='square';hi.frequency.setValueAtTime(950,t);hg.gain.setValueAtTime(.025,t);hg.gain.exponentialRampToValueAtTime(.0001,t+.035);hi.connect(hg);hg.connect(this.audio.destination);hi.start(t);hi.stop(t+.04);}this.beatCount=(this.beatCount||0)+1;}catch(e){}
+addGlow(x,y,r,color,alpha){const c=this.track(this.add.circle(x,y,r,color,alpha));return c;}
+startAudio(){
+try{if(!this.audio){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;this.audio=new C();this.master=this.audio.createGain();this.master.gain.value=.62;this.master.connect(this.audio.destination);this.noiseBuffer=this.audio.createBuffer(1,Math.floor(this.audio.sampleRate*.5),this.audio.sampleRate);const data=this.noiseBuffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;}if(this.audio.state==='suspended')this.audio.resume();this.nextStep=this.audio.currentTime+.08;this.stepIndex=0;}catch(e){}
 }
-startRun(){this.score=0;this.combo=0;this.best=0;this.beatCount=0;this.startStage(0);}
+envGain(g,t,peak,duration){g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,peak),t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+duration);}
+playKick(t,accent){
+if(!this.audio||!this.master)return;const o=this.audio.createOscillator(),g=this.audio.createGain();o.type='sine';o.frequency.setValueAtTime(accent?155:125,t);o.frequency.exponentialRampToValueAtTime(42,t+.16);this.envGain(g,t,accent?.42:.28,.19);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+.21);
+const b=this.audio.createOscillator(),bg=this.audio.createGain();b.type='triangle';b.frequency.setValueAtTime([55,65.4,73.4,49][Math.floor(this.stepIndex/2)%4],t);this.envGain(bg,t,accent?.12:.075,.23);b.connect(bg);bg.connect(this.master);b.start(t);b.stop(t+.25);
+}
+playNoise(t,peak,duration,filterType,frequency){
+if(!this.audio||!this.noiseBuffer)return;const src=this.audio.createBufferSource(),filter=this.audio.createBiquadFilter(),g=this.audio.createGain();src.buffer=this.noiseBuffer;filter.type=filterType;filter.frequency.value=frequency;this.envGain(g,t,peak,duration);src.connect(filter);filter.connect(g);g.connect(this.master);src.start(t);src.stop(t+duration+.02);
+}
+playHat(t){this.playNoise(t,.045,.035,'highpass',7200);}
+playSnare(t){this.playNoise(t,.19,.14,'bandpass',1900);const o=this.audio.createOscillator(),g=this.audio.createGain();o.type='triangle';o.frequency.setValueAtTime(185,t);o.frequency.exponentialRampToValueAtTime(95,t+.08);this.envGain(g,t,.09,.11);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+.13);}
+onBeat(){
+this.lastBeatMs=this.time.now;this.beatNo=(this.beatNo||0)+1;
+const color=COLORS[Math.max(0,Math.min(8,this.stage))]||0xffdf61;
+const ring=this.add.circle(210,460,64,0xffffff,0.001).setStrokeStyle(this.beatNo%4===1?5:3,color,this.beatNo%4===1?.9:.55);this.track(ring);
+this.tweens.add({targets:ring,scaleX:2.05,scaleY:2.05,alpha:0,duration:360,ease:'Sine.Out',onComplete:()=>ring.destroy()});
+this.pulses.forEach((p,i)=>{if(!p.o||!p.o.active)return;const o=p.o;if(o===this.flyTarget)return;this.tweens.add({targets:o,y:o.y-13,angle:p.baseAngle+((this.beatNo%2)?4:-4),duration:95,ease:'Quad.Out',yoyo:true,hold:45});});
+if(this.eqBars){this.eqBars.forEach((b,i)=>{if(b&&b.active){const h=8+((i*7+this.beatNo*11)%34);this.tweens.add({targets:b,scaleY:h/20,duration:100,yoyo:true,hold:80});}});}
+if(this.stage===0&&this.flyTarget&&this.beatNo%2===0)this.moveFly();
+}
+startRun(){this.score=0;this.combo=0;this.best=0;this.beatNo=0;this.startStage(0);}
 startStage(i){
 if(this.mic){this.mic.stream.getTracks().forEach(t=>t.stop());this.mic.ctx.close();this.mic=null;this.micData=null;}
-this.clearObjects();this.stage=i;this.locked=false;this.holding=false;this.hold=0;this.swipeStart=null;this.pad={left:null,right:null};this.elapsed=0;this.duration=this.quick?5000:15000;
+this.clearObjects();this.stage=i;this.stageFinished=false;this.holding=false;this.holdMs=0;this.swipeStart=null;this.pad={left:null,right:null};this.elapsed=0;this.duration=this.quick?5000:14000;this.hitCount=0;this.goal=this.quick?1:4;this.lastWrong=0;this.lastShakeAt=0;
 if(i>=LEVELS.length){this.showResults();return;}
-const L=LEVELS[i];this.txt(210,42,'第 '+(i+1)+' / 9 关',14,'#a9afd2');this.txt(210,82,L.name,27,'#ffdf61');this.txt(210,126,L.desc,15,'#f4f2ff',.5,'normal');
-this.txt(72,177,L.type,13,'#68e4c4');this.txt(347,177,L.bpm+' BPM',13,'#b6a8ff');
-this.track(this.add.rectangle(210,207,330,7,0x343858).setOrigin(.5));this.progress=this.track(this.add.rectangle(45,207,0,7,0x63e6be).setOrigin(0,.5));this.timeText=this.txt(365,230,'15.0s',12,'#c2c6df');
-if(i===0)this.stageHeroes();if(i===1)this.stageBananas();if(i===2)this.stageFish();if(i===3)this.stagePigeon();if(i===4)this.stageSneeze();if(i===5)this.stagePizza();if(i===6)this.stagePads();if(i===7)this.stageShake();if(i===8)this.stageShout();
+const L=LEVELS[i];this.drawStageDecor(i);
+this.txt(24,30,'关卡 '+String(i+1).padStart(2,'0')+' / 09',12,'#aeb6da',0,'bold');
+this.txt(210,66,L.name,25,'#ffdf61');
+this.txt(210,106,L.desc,14,'#e4e8ff',.5,'normal');
+this.txt(30,145,L.type,12,'#69e3c0',0,'bold');this.txt(389,145,L.bpm+' BPM',12,'#c0b4ff',1,'bold');
+this.track(this.add.rectangle(210,169,350,6,0x353a5e).setStrokeStyle(1,0xffffff,.1));this.progress=this.track(this.add.rectangle(35,169,0,6,0x6be4c1).setOrigin(0,.5));
+this.hitText=this.txt(26,197,'命中 0 / '+this.goal,12,'#b8c3e8',0,'bold');this.timeText=this.txt(394,197,'14.0s',12,'#b8c3e8',1,'bold');
+this.eqBars=[];for(let j=0;j<18;j++){const b=this.track(this.add.rectangle(25+j*22,827,9,15+(j%3)*4,COLORS[i],.25).setOrigin(.5,1));this.eqBars.push(b);}
+this.beatDots=[];for(let j=0;j<4;j++){const d=this.track(this.add.circle(171+j*26,224,5,0x5b6284,.6));this.beatDots.push(d);}
+if(i===0)this.stageFly();if(i===1)this.stagePhoto();if(i===2)this.stageBoss();if(i===3)this.stagePigeon();if(i===4)this.stageSneeze();if(i===5)this.stagePizza();if(i===6)this.stagePads();if(i===7)this.stageShake();if(i===8)this.stageShout();
 }
-stageHeroes(){[82,210,338].forEach((x,i)=>{const o=this.image(i===2?'vampire':'hero',x,420,96,118,i===1?4:-3);o.setInteractive({useHandCursor:true}).on('pointerdown',()=>this.answer(i===2,i===2?'抓到冒牌吸血鬼！':'这位英雄看起来很无辜……'));});this.txt(210,585,'哪一个不是真正的英雄？',17,'#b9c1e5',.5,'normal');}
-stageBananas(){[82,210,338].forEach((x,i)=>{const o=this.image(i===1?'shades':'banana',x,425,105,115,i===0?-8:i===2?8:0);o.setInteractive({useHandCursor:true}).on('pointerdown',()=>this.answer(i===1,i===1?'墨镜香蕉被逮到了！':'这根香蕉很普通，再找找。'));});this.txt(210,585,'点击最会装酷的香蕉。',17,'#b9c1e5',.5,'normal');}
-stageFish(){[82,210,338].forEach((x,i)=>{const o=this.image(i===1?'liar':'fish',x,420,116,106,i===0?-5:i===2?7:0);o.setInteractive({useHandCursor:true}).on('pointerdown',()=>this.answer(i===1,i===1?'谎话被你听出来了！':'它真的会游泳，再试试。'));});this.txt(210,585,'谁在说谎？',17,'#b9c1e5',.5,'normal');}
+drawStageDecor(i){
+const color=COLORS[i];this.addGlow(210,420,200,color,.075);
+const panel=this.track(this.add.rectangle(210,490,366,510,0x171a38,.78).setStrokeStyle(2,color,.22));
+const g=this.track(this.add.graphics());g.lineStyle(2,color,.12);g.beginPath();g.moveTo(28,690);g.lineTo(392,690);g.strokePath();
+for(let k=0;k<5;k++){const x=40+k*85;const beam=this.track(this.add.triangle(x,320,0,0,52,0,26,230,color,.025));this.tweens.add({targets:beam,angle:k%2?8:-8,duration:1100+k*100,yoyo:true,repeat:-1,ease:'Sine.InOut'});}
+}
+stageFly(){
+this.image('vampire',210,427,166,185,3);this.txt(210,557,'鼻子上的苍蝇，烦死了！',15,'#b9c3e7',.5,'normal');
+this.flyTarget=this.image('fly',210,335,62,62,0);this.flyTarget.setInteractive({useHandCursor:true});this.flyTarget.on('pointerdown',()=>{this.actionSuccess('啪！苍蝇飞出了爵士乐队。');this.tweens.add({targets:this.flyTarget,angle:this.flyTarget.angle+300,scale:.25,alpha:.2,duration:130,onComplete:()=>{if(this.flyTarget&&this.flyTarget.active){this.flyTarget.setAlpha(1).setScale(.24);this.moveFly(true);this.tweens.add({targets:this.flyTarget,scale:1,duration:180,ease:'Back.Out'});}}});});
+this.moveFly(true);
+}
+moveFly(initial){if(!this.flyTarget||!this.flyTarget.active)return;const x=initial?250:Phaser.Math.Between(65,350),y=initial?320:Phaser.Math.Between(315,495);this.tweens.add({targets:this.flyTarget,x,y,angle:Phaser.Math.Between(-35,35),duration:initial?1:210,ease:'Back.Out'});}
+stagePhoto(){
+this.image('hero',210,404,184,198,-3);this.addGlow(210,408,118,0xffd84d,.1);
+this.txt(210,548,'摆好姿势！等光圈合上。',15,'#c2c8e7',.5,'normal');
+const outer=this.track(this.add.circle(210,430,65,0xffffff,.02).setStrokeStyle(4,0xffffff,.65));this.photoOuter=outer;
+const inner=this.track(this.add.circle(210,430,105,0xffffff,.01).setStrokeStyle(3,0xffd84d,.85));this.photoInner=inner;
+this.tweens.add({targets:inner,scale:.55,duration:900,ease:'Sine.InOut',yoyo:true,repeat:-1});
+this.button(210,676,230,68,'📸  拍照！',()=>this.tryPhoto(),0x8d59d8);
+this.txt(210,744,'金色圈收进白色圈时得分最高',12,'#929fc9',.5,'normal');
+}
+tryPhoto(){
+const bpm=LEVELS[this.stage].bpm,period=60000/bpm;let dt=Math.max(0,this.time.now-this.lastBeatMs);dt=Math.min(dt,Math.abs(period-dt));if(dt<170)this.actionSuccess(dt<85?'完美踩拍！超人闪瞎全场。':'踩准了！摄影师获得工伤补贴。');else this.actionMiss('慢半拍！听鼓点再按快门。');
+if(this.photoOuter){this.photoOuter.setStrokeStyle(5,dt<170?0x63f5c8:0xff668c,1);this.time.delayedCall(140,()=>{if(this.photoOuter&&this.photoOuter.active)this.photoOuter.setStrokeStyle(4,0xffffff,.65);});}
+}
+stageBoss(){
+this.image('oldman',210,394,150,170,0);this.bossSprite=this.image('vampire',210,390,170,180,0);this.bossSprite.setVisible(false);
+this.track(this.add.rectangle(210,545,260,60,0x222641).setStrokeStyle(2,0x7983ad,.4));this.txt(210,545,'摸鱼工作台',18,'#dfe5ff');
+this.alertText=this.txt(210,610,'☕ 老板还没来，喝口咖啡',16,'#9fb1d8',.5,'normal');this.bossAlert=false;
+this.txt(210,686,'只在红色警报亮起时点击屏幕！',13,'#b7c1e2',.5,'normal');
+}
 stagePigeon(){
-this.image('pigeon',210,468,168,168,-4);this.txt(210,600,'把安全帽拖到鸽子头上',17,'#b9c1e5',.5,'normal');
-const h=this.image('helmet',210,285,106,88,4);h.setInteractive({draggable:true,useHandCursor:true});this.input.setDraggable(h);this.dragItem=h;
-this.txt(210,690,'小提示：拖到画面中间偏下的位置。',12,'#8e98bd',.5,'normal');
+this.image('pigeon',210,438,188,188,-2);this.txt(210,564,'给鸽子戴安全帽',16,'#c0c8e9',.5,'normal');
+this.helmetHome={x:210,y:310};this.resetHelmet();
+this.txt(210,675,'拖到鸽子头上，别给它穿鞋。',12,'#8e9bc6',.5,'normal');
 }
+resetHelmet(){if(this.helmet&&this.helmet.active)this.helmet.destroy();this.helmet=this.image('helmet',this.helmetHome.x,this.helmetHome.y,104,86,-5);this.helmet.setInteractive({draggable:true,useHandCursor:true});this.input.setDraggable(this.helmet);this.dragItem=this.helmet;}
 stageSneeze(){
-this.image('oldman',210,385,174,188,-3);this.txt(210,535,'憋住！憋住！',20,'#ff9aa9');
-this.track(this.add.rectangle(210,600,280,24,0x303653).setStrokeStyle(2,0xffffff,.2));this.barGraphics=this.track(this.add.graphics());
-this.txt(210,650,'按住下方大按钮，绿色区间松手',14,'#b9c1e5',.5,'normal');
-const r=this.track(this.add.rectangle(210,716,240,72,0x9c456e).setStrokeStyle(3,0xffa9c4,.6));r.setInteractive({useHandCursor:true});this.holdButton=r;
-this.txt(210,716,'按住憋气！',20,'#fff');
+this.image('oldman',210,397,185,200,0);this.txt(210,545,'啊……啊……阿嚏！',20,'#ff91b5');
+this.txt(210,606,'憋住进度条，在绿色区间松手',13,'#c1c9e9',.5,'normal');
+this.track(this.add.rectangle(210,657,282,28,0x2c3152).setStrokeStyle(2,0xffffff,.2));this.track(this.add.rectangle(210,657,54,26,0x48d6a4,.95));this.holdMarker=this.track(this.add.rectangle(70,657,5,36,0xffffff,1));
+this.button(210,725,252,70,'按住憋气！',()=>{},0xa74677);
+this.txt(210,785,'松手时机越准，连击越高',12,'#8e9bc6',.5,'normal');
 }
-stagePizza(){this.image('pizza',210,415,174,174,14);this.swipeDir=Math.random()<.5?-1:1;this.txt(210,560,this.swipeDir<0?'← 向左快速滑动':'快速向右滑动 →',22,'#ffdf61');this.txt(210,625,'从披萨附近划出一道长长的手势。',14,'#b9c1e5',.5,'normal');}
+stagePizza(){
+this.image('hero',210,397,136,150,-3);this.pizza=this.image('pizza',210,475,130,130,12);
+this.swipeDir=Math.random()<.5?-1:1;this.updateSwipePrompt();
+this.txt(210,616,'手指划得越快，披萨飞得越远。',13,'#b7c1e2',.5,'normal');
+}
+updateSwipePrompt(){if(this.swipePrompt&&this.swipePrompt.active)this.swipePrompt.destroy();this.swipePrompt=this.txt(210,564,this.swipeDir<0?'← 向左拍飞！':'向右拍飞！ →',23,'#ffdf61');}
 stagePads(){
-this.image('fly',210,375,180,190,-4);
-this.track(this.add.rectangle(105,600,120,108,0x286a86).setStrokeStyle(3,0x6bdcff,.8));this.track(this.add.rectangle(315,600,120,108,0x734e9b).setStrokeStyle(3,0xd2a5ff,.8));
-this.txt(105,590,'左喷射器',15,'#fff');this.txt(315,590,'右喷射器',15,'#fff');this.txt(210,710,'同时按住左右两侧',17,'#b9c1e5');this.txt(210,755,'桌面也可同时按 A + L',13,'#8e98bd',.5,'normal');
+this.image('heroFly',210,392,192,204,-3);
+this.addGlow(105,616,65,0x3ccfff,.13);this.addGlow(315,616,65,0xb78cff,.13);
+this.leftPad=this.track(this.add.circle(105,616,54,0x2a9dbd,.95).setStrokeStyle(4,0x8cecff,.8));this.rightPad=this.track(this.add.circle(315,616,54,0x8254bb,.95).setStrokeStyle(4,0xe0c5ff,.8));
+this.txt(105,616,'左喷射器',14,'#fff');this.txt(315,616,'右喷射器',14,'#fff');this.txt(210,715,'同时按住左右两侧',16,'#c2c9e9');this.txt(210,753,'桌面可同时按 A + L',12,'#8e9bc6',.5,'normal');
 }
-stageShake(){this.image('vampire',210,410,174,190,5);this.txt(210,555,'Z z z …',28,'#b6a8ff');this.button(210,650,240,58,'启用摇晃传感器',()=>this.enableMotion(),0x5b4b9b);this.button(210,724,240,54,'桌面模拟摇动',()=>this.answer(true,'吸血鬼终于醒了！'),0x2c7c8b);}
-stageShout(){this.image('shout',210,400,180,190,-4);this.txt(210,550,'A A A A A ！',22,'#ffdf61');this.button(210,638,240,58,'开启麦克风',()=>this.enableMic(),0x5b4b9b);this.button(210,712,240,54,'桌面模拟尖叫',()=>this.answer(true,'音量爆表！超人起飞！'),0x2c7c8b);this.txt(210,780,'麦克风仅在点击授权后使用',12,'#8e98bd',.5,'normal');}
+stageShake(){
+this.image('vampire',210,417,178,194,4);this.txt(210,556,'Z  z  z  …',26,'#c3b1ff');this.txt(210,600,'吸血鬼的闹钟坏了。',14,'#b8c2e5',.5,'normal');
+this.button(210,675,252,58,'启用摇晃传感器',()=>this.enableMotion(),0x5b4b9b);
+this.button(210,746,252,52,'桌面模拟摇动',()=>this.shakeHit(),0x247e8a);
+}
+stageShout(){
+this.image('shout',210,398,190,200,-3);this.addGlow(210,408,125,0xffd84d,.11);
+this.txt(210,554,'啊啊啊啊啊——！',23,'#ffdf61');
+this.button(210,645,252,58,'开启麦克风',()=>this.enableMic(),0x5b4b9b);
+this.button(210,716,252,54,'桌面模拟尖叫',()=>this.shoutHit(),0x247e8a);
+this.txt(210,785,'麦克风只在授权后启用',12,'#8e9bc6',.5,'normal');
+}
 onDown(p){
-if(this.stage===4&&p.x>90&&p.x<330&&p.y>650&&p.y<790){this.holding=true;this.hold=0;return;}
+if(this.stage===2){this.bossTap();return;}
+if(this.stage===4&&p.y>680&&p.y<790){this.holding=true;this.holdMs=0;return;}
 if(this.stage===5){this.swipeStart={x:p.x,y:p.y,t:this.time.now};return;}
-if(this.stage===6){if(p.x<190)this.pad.left=this.time.now;else if(p.x>230)this.pad.right=this.time.now;this.checkPads();return;}
+if(this.stage===6){if(p.x<205)this.pad.left=this.time.now;else if(p.x>215)this.pad.right=this.time.now;this.checkPads();return;}
 }
 onUp(p){
-if(this.stage===4&&this.holding){this.holding=false;this.answer(this.hold>=.58&&this.hold<=.82,this.hold>=.58&&this.hold<=.82?'喷嚏被你成功憋回去了！':'时机不对！卡在绿色区域再松手。');return;}
-if(this.stage===5&&this.swipeStart){const dx=p.x-this.swipeStart.x,dy=p.y-this.swipeStart.y;const good=Math.abs(dx)>72&&Math.abs(dx)>Math.abs(dy)*1.15&&(dx<0?-1:1)===this.swipeDir;this.swipeStart=null;this.answer(good,good?'披萨反弹成功！':'方向不对或滑动太短，再试一次。');}
+if(this.stage===4&&this.holding){this.holding=false;const v=(this.holdMs%1500)/1500;this.actionResult(v>=.44&&v<=.64,v>=.44&&v<=.64?'喷嚏憋回去了！全场鼓掌。':'喷嚏爆发！老奶奶震碎了节拍。');return;}
+if(this.stage===5&&this.swipeStart){const dx=p.x-this.swipeStart.x,dy=p.y-this.swipeStart.y,dt=this.time.now-this.swipeStart.t;const dir=dx<0?-1:1,good=Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*1.15&&dt<550&&dir===this.swipeDir;this.swipeStart=null;if(good){this.actionSuccess('披萨回旋！外卖员开始怀疑人生。');this.swipeDir*=-1;this.updateSwipePrompt();if(this.pizza&&this.pizza.active){this.tweens.add({targets:this.pizza,x:this.swipeDir<0?310:110,angle:this.pizza.angle+180,duration:180,yoyo:true,onComplete:()=>{if(this.pizza&&this.pizza.active)this.pizza.setPosition(210,475);}});}}else this.actionMiss('方向不对，或者不够快！');}
 }
-checkPads(){if(this.pad.left!==null&&this.pad.right!==null&&Math.abs(this.pad.left-this.pad.right)<450)this.answer(true,'双喷射器同时点火！');}
+bossTap(){if(this.bossAlert){this.actionSuccess('装忙成功！你刚刚合上了 47 个表格。');this.bossAlert=false;this.bossNextAt=this.elapsed+500;}else this.actionMiss('你在老板没来时就开始演了。');}
+checkPads(){if(this.pad.left!==null&&this.pad.right!==null&&Math.abs(this.pad.left-this.pad.right)<260){this.actionSuccess('双喷射器同时点火！超人进入低轨道。');this.pad={left:null,right:null};if(this.leftPad)this.leftPad.setFillStyle(0x2a9dbd);if(this.rightPad)this.rightPad.setFillStyle(0x8254bb);}else if(this.pad.left!==null&&this.pad.right!==null){this.actionMiss('要同时按下！再来一次。');this.pad={left:null,right:null};}}
+actionSuccess(msg){
+this.hitCount++;this.combo++;this.best=Math.max(this.best,this.combo);this.score+=100+Math.min(100,this.combo*8);if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal+(this.hitCount>=this.goal?'  ✓':''));
+this.feedback(msg,true);const burst=this.add.particles(210,440,'__WHITE');if(burst){burst.setDepth(20);burst.explode?.(12);}
+}
+actionResult(ok,msg){if(ok)this.actionSuccess(msg);else this.actionMiss(msg);}
+actionMiss(msg){this.combo=0;if(this.hitText)this.hitText.setText('命中 '+Math.min(this.hitCount,this.goal)+' / '+this.goal);if(this.time.now-this.lastWrong>450){this.feedback(msg,false);this.lastWrong=this.time.now;}}
+feedback(msg,good){if(this.feedbackText&&this.feedbackText.active)this.feedbackText.destroy();this.feedbackText=this.txt(210,810,msg,14,good?'#63f5c8':'#ff9eaf');this.time.delayedCall(850,()=>{if(this.feedbackText&&this.feedbackText.active)this.feedbackText.destroy();});}
 onMotion(e){
-if(this.stage!==7)return;const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const v=[a.x||0,a.y||0,a.z||0];if(this.motionPrev){const d=Math.abs(v[0]-this.motionPrev[0])+Math.abs(v[1]-this.motionPrev[1])+Math.abs(v[2]-this.motionPrev[2]);if(d>17)this.answer(true,'晃动成功！吸血鬼醒了！');}this.motionPrev=v;
+if(this.stage!==7)return;const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const v=[a.x||0,a.y||0,a.z||0];if(this.motionPrev){const d=Math.abs(v[0]-this.motionPrev[0])+Math.abs(v[1]-this.motionPrev[1])+Math.abs(v[2]-this.motionPrev[2]);if(d>19&&this.time.now-this.lastShakeAt>650){this.lastShakeAt=this.time.now;this.shakeHit();}}this.motionPrev=v;
 }
-enableMotion(){try{const D=window.DeviceMotionEvent;if(D&&typeof D.requestPermission==='function')D.requestPermission().then(s=>{if(s==='granted')this.feedback('传感器已启用，摇一摇！',true);else this.feedback('没有获得传感器权限，可使用桌面模拟按钮。',false);}).catch(()=>this.feedback('传感器不可用，请使用模拟按钮。',false));else this.feedback('现在摇动手机试试！',true);this.motionEnabled=true;}catch(e){this.feedback('传感器不可用，请使用模拟按钮。',false);}}
+enableMotion(){try{const D=window.DeviceMotionEvent;if(D&&typeof D.requestPermission==='function')D.requestPermission().then(s=>{if(s==='granted')this.feedback('传感器已启用，摇一摇！',true);else this.feedback('没有获得权限，可用模拟按钮。',false);}).catch(()=>this.feedback('传感器不可用，可用模拟按钮。',false));else this.feedback('现在摇动手机试试！',true);}catch(e){this.feedback('传感器不可用，可用模拟按钮。',false);}}
+shakeHit(){if(this.stage===7){this.actionSuccess('醒了！吸血鬼要求赔偿他的美梦。');if(this.vampireSprite)this.vampireSprite.setAngle(Phaser.Math.Between(-18,18));}}
 async enableMic(){
-try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('unsupported');const stream=await navigator.mediaDevices.getUserMedia({audio:true});if(this.stage!==8){stream.getTracks().forEach(t=>t.stop());return;}const C=window.AudioContext||window.webkitAudioContext;const ctx=new C();const source=ctx.createMediaStreamSource(stream);const analyser=ctx.createAnalyser();analyser.fftSize=256;source.connect(analyser);this.mic={stream,ctx,analyser};this.micData=new Uint8Array(analyser.fftSize);this.feedback('麦克风已开启，大喊一声！',true);}catch(e){this.feedback('麦克风不可用或未授权，可点模拟尖叫。',false);}
+try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('unsupported');const stream=await navigator.mediaDevices.getUserMedia({audio:true});if(this.stage!==8){stream.getTracks().forEach(t=>t.stop());return;}const C=window.AudioContext||window.webkitAudioContext,ctx=new C(),source=ctx.createMediaStreamSource(stream),analyser=ctx.createAnalyser();analyser.fftSize=256;source.connect(analyser);this.mic={stream,ctx,analyser};this.micData=new Uint8Array(analyser.fftSize);this.feedback('麦克风已开启，大喊一声！',true);}catch(e){this.feedback('麦克风不可用，可点模拟尖叫。',false);}
 }
+shoutHit(){if(this.stage===8&&this.time.now-this.lastShoutAt>550){this.lastShoutAt=this.time.now;this.actionSuccess('音量爆表！超人突破了大气层。');}}
 update(_,delta){
-if(this.stage>=0&&this.stage<LEVELS.length&&!this.locked){
-this.elapsed+=delta;const left=Math.max(0,this.duration-this.elapsed);if(this.timeText)this.timeText.setText((left/1000).toFixed(1)+'s');if(this.progress)this.progress.width=330*(1-left/this.duration);
-if(this.holding){this.hold=Math.min(1,this.hold+delta/2600);if(this.barGraphics){this.barGraphics.clear();this.barGraphics.fillStyle(0x63e6be,1);this.barGraphics.fillRect(73+280*.58,588,280*.24,24);this.barGraphics.fillStyle(0xffffff,1);this.barGraphics.fillRect(70+280*this.hold,585,4,30);}}
-if(this.stage===6&&this.keys.A.isDown&&this.keys.L.isDown)this.answer(true,'双喷射器同时点火！');
-if(this.stage===8&&this.mic){this.mic.analyser.getByteTimeDomainData(this.micData);let sum=0;for(let i=0;i<this.micData.length;i++){const n=(this.micData[i]-128)/128;sum+=n*n;}if(Math.sqrt(sum/this.micData.length)>.19)this.answer(true,'音量爆表！超人起飞！');}
-if(left<=0){this.feedback('时间到！继续下一关。',false);this.locked=true;this.time.delayedCall(650,()=>this.startStage(this.stage+1));}
+if(this.stage>=0&&this.stage<LEVELS.length&&!this.stageFinished){
+this.elapsed+=delta;const left=Math.max(0,this.duration-this.elapsed);if(this.timeText)this.timeText.setText((left/1000).toFixed(1)+'s');if(this.progress)this.progress.width=350*(1-left/this.duration);
+if(this.beatDots){const idx=(this.beatNo||0)%4;this.beatDots.forEach((d,j)=>{d.setFillStyle(j===idx?COLORS[this.stage]:0x5b6284,j===idx?1:.45);if(j===idx)d.setScale(1.25);else d.setScale(1);});}
+if(this.stage===2){const phase=this.elapsed%2200,alert=phase<820;if(alert!==this.bossAlert){this.bossAlert=alert;if(this.bossSprite)this.bossSprite.setVisible(alert);if(this.alertText)this.alertText.setText(alert?'🚨 老板出现！快装忙！':'☕ 老板走了，继续摸鱼');if(this.alertText)this.alertText.setColor(alert?'#ff668c':'#9fb1d8');}}
+if(this.holding){this.holdMs+=delta;const v=(this.holdMs%1500)/1500;if(this.holdMarker)this.holdMarker.x=70+280*v;}
+if(this.stage===6&&this.keys.A.isDown&&this.keys.L.isDown){this.actionSuccess('双喷射器同时点火！');this.pad={left:null,right:null};}
+if(this.stage===8&&this.mic&&this.time.now-this.lastShoutAt>600){this.mic.analyser.getByteTimeDomainData(this.micData);let sum=0;for(let i=0;i<this.micData.length;i++){const n=(this.micData[i]-128)/128;sum+=n*n;}if(Math.sqrt(sum/this.micData.length)>.2)this.shoutHit();}
+if(left<=0){this.stageFinished=true;this.feedback(this.hitCount>=this.goal?'漂亮！目标完成，下一关更疯。':'时间到！下一关换种操作。',this.hitCount>=this.goal);this.time.delayedCall(650,()=>this.startStage(this.stage+1));}
 }
-if(this.audio&&this.stage>=0&&this.stage<LEVELS.length){const bpm=LEVELS[this.stage].bpm;while(this.audio.currentTime>=this.nextBeat){this.playBeat();this.nextBeat+=60/bpm;}}
-const t=this.time.now/1000;this.pulses.forEach(p=>{if(p.o&&p.o.active){const k=1+.035*Math.sin(t*6.28*(this.stage>=0&&this.stage<9?LEVELS[this.stage].bpm/60:1));p.o.setScale(p.sx*k,p.sy*k);}});
+if(this.audio&&this.stage>=0&&this.stage<LEVELS.length){const bpm=LEVELS[this.stage].bpm,step=30/bpm;while(this.audio.currentTime>=this.nextStep){const t=this.nextStep;if(this.stepIndex%2===0){this.onBeat();const beat=Math.floor(this.stepIndex/2)%4;if(beat===0||beat===2)this.playKick(t,beat===0);else this.playSnare(t);}this.playHat(t);this.stepIndex++;this.nextStep+=step;}}
 }
-answer(ok,msg){
-if(this.locked)return;if(ok){this.locked=true;this.score+=100+this.combo*10;this.combo++;this.best=Math.max(this.best,this.combo);this.feedback(msg||'漂亮！',true);this.time.delayedCall(850,()=>this.startStage(this.stage+1));}
-else{this.combo=0;this.feedback(msg||'再试一次！',false);}
-}
-feedback(msg,good){const f=this.txt(210,815,msg,15,good?'#63e6be':'#ff9ba8');this.time.delayedCall(780,()=>{if(f&&f.active)f.destroy();});}
 showResults(){
-this.clearObjects();this.stage=9;this.txt(210,110,'节拍挑战完成！',32,'#ffdf61');this.image('hero',210,285,170,170,-5);this.txt(210,425,'得分  '+this.score,28,'#ffffff');this.txt(210,470,'最佳连击  '+this.best,19,'#63e6be');this.txt(210,530,'九种操作，你全部体验过了。',16,'#b9c1e5',.5,'normal');this.button(210,640,250,60,'再来一局',()=>{this.startAudio();this.startRun();},0x7259e8);this.button(210,716,250,54,'返回标题',()=>this.showTitle(),0x2c7c8b);
+this.clearObjects();this.stage=9;this.drawStageDecor(8);this.txt(210,100,'你活着闯过了！',33,'#ffdf61');this.image('hero',210,280,180,188,-5);this.txt(210,433,'总分  '+this.score,28,'#ffffff');this.txt(210,477,'最佳连击  '+this.best,19,'#63f5c8');this.txt(210,535,'九种操作，九次社死。',16,'#c2c9e9',.5,'normal');this.button(210,645,260,60,'再来一局',()=>{this.startAudio();this.startRun();},0x7655e8);this.button(210,719,260,54,'返回标题',()=>this.showTitle(),0x247e8a);
 }
 }
-const config={type:Phaser.CANVAS,parent:'game',width:W,height:H,backgroundColor:'#11142b',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true,pixelArt:false,transparent:false},scene:[Party]};
+const config={type:Phaser.CANVAS,parent:'game',width:W,height:H,backgroundColor:'#0b0d20',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true,pixelArt:false,transparent:false},scene:[Party]};
 new Phaser.Game(config);
 })();
 </script></body></html>
