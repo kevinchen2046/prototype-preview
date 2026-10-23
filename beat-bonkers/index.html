@@ -22,7 +22,7 @@ const LEVELS=[
 ];
 class Party extends Phaser.Scene{
 constructor(){super('party');this.objects=[];this.pulses=[];this.stage=-1;this.score=0;this.combo=0;this.best=0;this.quick=false;this.locked=false;this.holding=false;this.hold=0;this.swipeStart=null;this.pad={left:null,right:null};this.dragItem=null;this.motionPrev=null;this.motionEnabled=false;this.mic=null;this.micData=null;this.audio=null;this.nextBeat=0;this.elapsed=0;}
-preload(){[['hero','hero.svg'],['banana','banana.svg'],['shades','banana_shades.svg'],['fish','fish.svg'],['liar','fish_lie.svg'],['pigeon','pigeon.svg'],['helmet','helmet.svg'],['oldman','oldman.svg'],['pizza','pizza.svg'],['fly','hero_fly.svg'],['vampire','vampire.svg'],['shout','hero_shout.svg']].forEach(a=>this.load.image(a[0],'assets/'+a[1]));}
+preload(){[['hero','hero.svg'],['banana','banana.svg'],['shades','banana_shades.svg'],['fish','fish.svg'],['liar','fish_lie.svg'],['pigeon','pigeon.svg'],['helmet','helmet.svg'],['oldman','oldman.svg'],['pizza','pizza.svg'],['fly','hero_fly.svg'],['vampire','vampire.svg'],['shout','hero_shout.svg']].forEach(a=>this.load.svg(a[0],'assets/'+a[1],{width:256,height:256}));}
 create(){
 this.drawBackdrop();this.input.addPointer(2);
 this.input.on('pointerdown',p=>this.onDown(p));this.input.on('pointerup',p=>this.onUp(p));
