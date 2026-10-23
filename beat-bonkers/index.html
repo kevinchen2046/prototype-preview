@@ -125,7 +125,7 @@ showResults(){
 this.clearObjects();this.stage=9;this.txt(210,110,'节拍挑战完成！',32,'#ffdf61');this.image('hero',210,285,170,170,-5);this.txt(210,425,'得分  '+this.score,28,'#ffffff');this.txt(210,470,'最佳连击  '+this.best,19,'#63e6be');this.txt(210,530,'九种操作，你全部体验过了。',16,'#b9c1e5',.5,'normal');this.button(210,640,250,60,'再来一局',()=>{this.startAudio();this.startRun();},0x7259e8);this.button(210,716,250,54,'返回标题',()=>this.showTitle(),0x2c7c8b);
 }
 }
-const config={type:Phaser.AUTO,parent:'game',width:W,height:H,backgroundColor:'#11142b',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true,pixelArt:false},scene:[Party]};
+const config={type:Phaser.CANVAS,parent:'game',width:W,height:H,backgroundColor:'#11142b',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true,pixelArt:false},scene:[Party]};
 new Phaser.Game(config);
 })();
 </script></body></html>
