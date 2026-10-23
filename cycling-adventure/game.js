@@ -15,7 +15,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rand=(min,max)=>min+Math.random()*(max-min);
 // A broad downhill fall is combined with shorter rolling bumps. Terrain is sampled in WORLD space,
 // so its curve scrolls beneath the rider instead of behaving like a flat floor.
-function terrainY(x){return 455+125*Math.sin(x/560+.15)+26*Math.sin(x/190+.6)+10*Math.sin(x/74+.2);}
+function terrainY(x){return 455+125*Math.sin(x/560+.15)+38*Math.sin(x/190+.6)+13*Math.sin(x/74+.2);}
 function terrainSlope(x){return (terrainY(x+3)-terrainY(x-3))/6;}
 function worldAtScreen(x){return state.worldDistance+(x-PLAYER_X);}
 function image(key,x,y,w,h,rotation=0,originX=.5,originY=.5){const img=images[key];if(!img||!img.complete||!img.naturalWidth)return;ctx.save();ctx.translate(x,y);ctx.rotate(rotation);ctx.drawImage(img,-w*originX,-h*originY,w,h);ctx.restore();}
