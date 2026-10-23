@@ -129,6 +129,7 @@ for(let i=this.hazards.length-1;i>=0;i--){const h=this.hazards[i];h.y+=h.dir*spe
 if(!h.hit&&h.lane===this.lane&&Math.abs(h.y-this.player.y)<48&&this.time.now>this.invulnerableUntil&&this.time.now>this.dashUntil){h.hit=true;this.hitObstacle(h);}
 if(h.y>H+120||h.y< -120||h.hit){h.ring.destroy();h.sprite.destroy();this.hazards.splice(i,1);}}
 if(this.minisCompleted>=EVENTS.length&&this.finishAt>0){if(!this.finishGate&&this.distance>=this.finishAt-550)this.spawnFinishGate();if(this.finishGate){this.finishGate.y+=this.finishGate.dir*speed*dt*1.25;this.finishGate.container.y=this.finishGate.y;}if(this.distance>=this.finishAt){this.showResults(true);return;}}
+if(this.lives<=0)return;
 if(this.distance>=this.nextMiniAt&&this.minisCompleted<EVENTS.length){this.beginMini(this.minisCompleted);return;}
 }
 spawnFinishGate(){
@@ -157,7 +158,7 @@ for(const h of this.hazards){if(h.lane===this.lane&&Math.abs(h.y-this.player.y)<
 }else{this.feedback('听鼓点！踩准再点击冲刺。',false);}
 }
 beginMini(index){
-this.clearPhase();this.phase='mini';this.miniIndex=index;this.miniType=index%EVENTS.length;this.miniInfo=EVENTS[this.miniType];this.miniElapsed=0;this.miniDuration=this.quick?3200:this.miniInfo.seconds*1000;this.miniHits=0;this.miniGoal=this.quick?1:this.miniInfo.goal;this.miniEnding=false;this.gesture=null;this.holding=false;this.draggingHelmet=false;this.padDown={left:null,right:null};this.padHeld={left:false,right:false};this.lastShakeTap=0;
+this.clearPhase();this.phase='mini';this.miniIndex=index;this.miniType=index%EVENTS.length;this.miniInfo=EVENTS[this.miniType];this.miniElapsed=0;this.miniDuration=this.quick?3200:this.miniInfo.seconds*1000;this.miniHits=0;this.miniGoal=this.quick?1:this.miniInfo.goal;this.miniEnding=false;this.finishedMini=false;this.gesture=null;this.holding=false;this.draggingHelmet=false;this.padDown={left:null,right:null};this.padHeld={left:false,right:false};this.lastShakeTap=0;
 const color=COLORS[this.miniType];const bg=this.track(this.add.graphics());bg.fillStyle(0x11152f,.94);bg.fillRoundedRect(18,190,384,520,26);bg.lineStyle(2,color,.75);bg.strokeRoundedRect(18,190,384,520,26);
 this.text(25,31,'荒诞事件 '+(index+1)+' / '+EVENTS.length,12,'#c5cbea',0);
 this.text(210,70,this.miniInfo.name,27,'#ffdf61');this.text(210,112,this.miniInfo.desc,14,'#e3e7ff',.5,'normal');this.text(30,151,this.miniInfo.type,12,'#69e3c0',0);this.miniTimer=this.text(390,151,(this.miniDuration/1000).toFixed(1)+'s',12,'#c4c9e8',1);
